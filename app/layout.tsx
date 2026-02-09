@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
-import { Inter} from "next/font/google";
+import { Inter, Google_Sans } from "next/font/google";
 import "./globals.css";
-
-
-
+import ReactQueryProvider from "@/lib/tanstack-provider";
+import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({
-    variable: "--font-inter",
-    weight:["100","200","300","400","500","600"],
-})
+  variable: "--font-inter",
+  weight: ["100", "200", "300", "400", "500", "600"],
+});
+const google_sans = Google_Sans({
+  variable: "--font-google-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "Get Franchise - Get Your Desired Franchise",
@@ -21,10 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable}  antialiased`}
-      >
-        {children}
+      <body className={`${google_sans.variable}  antialiased`}>
+        <ReactQueryProvider>{children}</ReactQueryProvider>
+        <Toaster richColors />
       </body>
     </html>
   );

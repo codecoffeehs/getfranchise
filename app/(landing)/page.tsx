@@ -5,16 +5,15 @@ import HowItWorksSection from "@/components/common/landing-page/HowItWorksSectio
 import Navbar from "@/components/common/landing-page/Navbar";
 import WhyGetFranchiseSection from "@/components/common/landing-page/WhySection";
 
-const Homepage=()=>{
-  return(
-      <>
-      <Navbar/>
-      <HeroSection/>
-      <HowItWorksSection/>
-      <WhyGetFranchiseSection/>
-      <FranchiseCategoriesSection/>
-      <CTASection/>
-      </>
-  )
-}
+const Homepage = () => {
+  return (
+    <>
+      <HeroSection />
+      <HowItWorksSection />
+      <WhyGetFranchiseSection />
+      <FranchiseCategoriesSection />
+      <CTASection />
+    </>
+  );
+};
 export default Homepage;
