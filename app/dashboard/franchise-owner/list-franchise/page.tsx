@@ -1,23 +1,69 @@
 "use client";
 
-import React from "react";
-
-import { useMutation } from "@tanstack/react-query";
+import * as React from "react";
 import axios from "axios";
-import { useState, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Upload, X, Loader2, AlertCircle } from "lucide-react";
+import { Upload, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const INDIAN_STATES_AND_UTS = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+] as const;
 
 interface FormState {
   franchiseName: string;
@@ -35,56 +81,29 @@ interface FormState {
   franchiseStates: string[];
 }
 
-interface ImagePreview {
-  file: File;
-  preview: string;
+interface ValidationErrors {
+  [key: string]: string;
 }
 
-const createFranchise = async (data: {
-  formData: FormState;
-  images: File[];
-}) => {
-  const payload = new FormData();
-
-  payload.append("franchiseName", data.formData.franchiseName);
-  payload.append("yearEstablished", data.formData.yearEstablished);
-  payload.append("totalLocations", data.formData.totalLocations);
-  payload.append("minInvestment", data.formData.minInvestment);
-  payload.append("maxInvestment", data.formData.maxInvestment);
-  payload.append("gstNumber", data.formData.gstNumber);
-  payload.append("spaceRequiredSqFt", data.formData.spaceRequiredSqFt);
-  payload.append("contactPerson", data.formData.contactPerson);
-  payload.append("phoneNumber", data.formData.phoneNumber);
-  payload.append("email", data.formData.email);
-  payload.append("website", data.formData.website);
-  payload.append("detailedDescription", data.formData.detailedDescription);
-
-  data.formData.franchiseStates.forEach((state) => {
-    payload.append("franchiseStates", state);
-  });
-
-  data.images.forEach((image) => {
-    payload.append("images", image);
-  });
-
-  const response = await axios.post(
-    "http://localhost:5151/api/franchise/create",
-    payload,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      withCredentials: true,
-    },
+interface TouchedFields {
+  [key: string]: boolean;
+}
+const checkListings = async () => {
+  const res = await axios.get(
+    `http://localhost:5151/api/franchise/has-listing`,
+    { withCredentials: true },
   );
-
-  return response.data;
+  return res.data;
 };
-
 export default function CreateFranchiseForm() {
-  const [formData, setFormData] = useState<FormState>({
+  const anchor = useComboboxAnchor();
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const [images, setImages] = React.useState<File[]>([]);
+  const [touched, setTouched] = React.useState<TouchedFields>({});
+  const [form, setForm] = React.useState<FormState>({
     franchiseName: "",
-    yearEstablished: new Date().getFullYear().toString(),
+    yearEstablished: "",
     totalLocations: "",
     minInvestment: "",
     maxInvestment: "",
@@ -95,23 +114,167 @@ export default function CreateFranchiseForm() {
     email: "",
     website: "",
     detailedDescription: "",
-    franchiseStates: [""],
+    franchiseStates: [],
   });
 
-  const [images, setImages] = useState<ImagePreview[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((p) => ({ ...p, [key]: value }));
+
+  const markTouched = (field: string) => {
+    setTouched((p) => ({ ...p, [field]: true }));
+  };
+
+  // Validation logic
+  const validateForm = (): ValidationErrors => {
+    const errors: ValidationErrors = {};
+
+    // Franchise Name
+    if (!form.franchiseName.trim()) {
+      errors.franchiseName = "Franchise name is required";
+    } else if (form.franchiseName.trim().length < 3) {
+      errors.franchiseName = "Franchise name must be at least 3 characters";
+    }
+
+    // Year Established
+    const currentYear = new Date().getFullYear();
+    const year = parseInt(form.yearEstablished);
+    if (!form.yearEstablished) {
+      errors.yearEstablished = "Year established is required";
+    } else if (isNaN(year) || year < 1900 || year > currentYear) {
+      errors.yearEstablished = `Year must be between 1900 and ${currentYear}`;
+    }
+
+    // Total Locations
+    const locations = parseInt(form.totalLocations);
+    if (!form.totalLocations) {
+      errors.totalLocations = "Total locations is required";
+    } else if (isNaN(locations) || locations < 1) {
+      errors.totalLocations = "Must have at least 1 location";
+    }
+
+    // GST Number - Indian GST format: 15 characters
+    if (!form.gstNumber.trim()) {
+      errors.gstNumber = "GST number is required";
+    } else if (
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+        form.gstNumber.trim(),
+      )
+    ) {
+      errors.gstNumber = "Invalid GST number format (e.g., 22AAAAA0000A1Z5)";
+    }
+
+    // Min Investment
+    const minInv = parseFloat(form.minInvestment);
+    if (!form.minInvestment) {
+      errors.minInvestment = "Minimum investment is required";
+    } else if (isNaN(minInv) || minInv <= 0) {
+      errors.minInvestment = "Must be greater than 0";
+    }
+
+    // Max Investment
+    const maxInv = parseFloat(form.maxInvestment);
+    if (!form.maxInvestment) {
+      errors.maxInvestment = "Maximum investment is required";
+    } else if (isNaN(maxInv) || maxInv <= 0) {
+      errors.maxInvestment = "Must be greater than 0";
+    } else if (maxInv < minInv) {
+      errors.maxInvestment = "Must be greater than minimum investment";
+    }
+
+    // Space Required
+    const space = parseFloat(form.spaceRequiredSqFt);
+    if (!form.spaceRequiredSqFt) {
+      errors.spaceRequiredSqFt = "Space required is required";
+    } else if (isNaN(space) || space <= 0) {
+      errors.spaceRequiredSqFt = "Must be greater than 0";
+    }
+
+    // Contact Person
+    if (!form.contactPerson.trim()) {
+      errors.contactPerson = "Contact person name is required";
+    } else if (form.contactPerson.trim().length < 2) {
+      errors.contactPerson = "Name must be at least 2 characters";
+    }
+
+    // Phone Number - Indian format
+    if (!form.phoneNumber.trim()) {
+      errors.phoneNumber = "Phone number is required";
+    } else if (
+      !/^[6-9]\d{9}$/.test(form.phoneNumber.trim().replace(/\s/g, ""))
+    ) {
+      errors.phoneNumber =
+        "Invalid Indian phone number (10 digits starting with 6-9)";
+    }
+
+    // Email
+    if (!form.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = "Invalid email format";
+    }
+
+    // Website (optional but validate if provided)
+    if (
+      form.website.trim() &&
+      !/^https?:\/\/.+\..+/.test(form.website.trim())
+    ) {
+      errors.website =
+        "Invalid website URL (must start with http:// or https://)";
+    }
+
+    // Description
+    if (!form.detailedDescription.trim()) {
+      errors.detailedDescription = "Description is required";
+    } else if (form.detailedDescription.trim().length < 50) {
+      errors.detailedDescription = `Description must be at least 50 characters (${form.detailedDescription.trim().length}/50)`;
+    }
+
+    // States
+    if (form.franchiseStates.length === 0) {
+      errors.franchiseStates =
+        "Select at least one state where franchise is available";
+    }
+
+    // Images
+    if (images.length === 0) {
+      errors.images = "At least one image is required";
+    }
+
+    return errors;
+  };
+
+  const errors = validateForm();
+  const isFormValid = Object.keys(errors).length === 0;
+
+  const { data: hasListings, isLoading } = useQuery<Boolean>({
+    queryKey: ["has-listing"],
+    queryFn: checkListings,
+  });
 
   const mutation = useMutation({
-    mutationFn: createFranchise,
-    onSuccess: () => {
-      toast.success("Franchise created successfully!", {
-        description: "Your franchise listing is pending approval.",
+    mutationFn: async () => {
+      const fd = new FormData();
+
+      Object.entries(form).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((v) => fd.append(key, v));
+        } else if (value.trim() !== "") {
+          fd.append(key, value);
+        }
       });
 
-      setFormData({
+      images.forEach((img) => fd.append("images", img));
+
+      await axios.post("http://localhost:5151/api/franchise/create", fd, {
+        withCredentials: true,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Franchise created successfully!");
+      // Reset form
+      setForm({
         franchiseName: "",
-        yearEstablished: new Date().getFullYear().toString(),
+        yearEstablished: "",
         totalLocations: "",
         minInvestment: "",
         maxInvestment: "",
@@ -122,543 +285,748 @@ export default function CreateFranchiseForm() {
         email: "",
         website: "",
         detailedDescription: "",
-        franchiseStates: [""],
+        franchiseStates: [],
       });
-
       setImages([]);
-      setErrors({});
+      setTouched({});
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || "Failed to create franchise";
-      toast.error("Error creating franchise", {
-        description: message,
-      });
-
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to create franchise. Please try again.",
+      );
     },
   });
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.franchiseName.trim()) newErrors.franchiseName = "Required";
-    if (!formData.yearEstablished) newErrors.yearEstablished = "Required";
-    if (!formData.totalLocations) newErrors.totalLocations = "Required";
-    if (!formData.minInvestment) newErrors.minInvestment = "Required";
-    if (!formData.maxInvestment) newErrors.maxInvestment = "Required";
-    if (Number(formData.maxInvestment) < Number(formData.minInvestment))
-      newErrors.maxInvestment = "Max must be greater than min";
-    if (!formData.gstNumber.trim()) newErrors.gstNumber = "Required";
-    if (!formData.spaceRequiredSqFt) newErrors.spaceRequiredSqFt = "Required";
-    if (!formData.contactPerson.trim()) newErrors.contactPerson = "Required";
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Required";
-    if (!formData.email.trim()) newErrors.email = "Required";
-    if (!formData.website.trim()) newErrors.website = "Required";
-    if (!formData.detailedDescription.trim())
-      newErrors.detailedDescription = "Required";
-    if (!formData.franchiseStates.filter((s) => s.trim()).length)
-      newErrors.franchiseStates = "At least one state required";
-    if (images.length === 0) newErrors.images = "At least one image required";
-    if (images.length > 3) newErrors.images = "Maximum 3 images allowed";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    field: keyof FormState,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: e.target.value,
-    }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleStateChange = (index: number, value: string) => {
-    setFormData((prev) => {
-      const newStates = [...prev.franchiseStates];
-      newStates[index] = value;
-      return { ...prev, franchiseStates: newStates };
-    });
-  };
-
-  const addState = () => {
-    setFormData((prev) => ({
-      ...prev,
-      franchiseStates: [...prev.franchiseStates, ""],
-    }));
-  };
-
-  const removeState = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      franchiseStates: prev.franchiseStates.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleImageChange = (files: FileList | null) => {
+  const handleImages = (files: FileList | null) => {
     if (!files) return;
 
-    const fileArray = Array.from(files);
-    const validImages = fileArray.filter((file) =>
-      file.type.startsWith("image/"),
+    const valid = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") && f.size <= 5 * 1024 * 1024,
     );
 
-    if (validImages.length !== fileArray.length) {
-      toast.warning("Some files were skipped", {
-        description: "Only image files are allowed.",
-      });
+    const oversized = Array.from(files).filter((f) => f.size > 5 * 1024 * 1024);
+    const invalid = Array.from(files).filter(
+      (f) => !f.type.startsWith("image/"),
+    );
+
+    if (oversized.length > 0) {
+      toast.error(`${oversized.length} file(s) exceeded 5MB size limit`);
+    }
+    if (invalid.length > 0) {
+      toast.error(`${invalid.length} file(s) are not valid images`);
     }
 
-    if (images.length + validImages.length > 3) {
-      toast.error("Maximum 3 images allowed", {
-        description: "Please remove some images before adding more.",
-      });
+    if (valid.length + images.length > 3) {
+      toast.error("Maximum 3 images allowed");
       return;
     }
 
-    validImages.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const preview = e.target?.result as string;
-        setImages((prev) => [...prev, { file, preview }]);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (errors.images) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.images;
-        return newErrors;
-      });
+    if (valid.length > 0) {
+      setImages((p) => [...p, ...valid]);
+      toast.success(`${valid.length} image(s) added successfully`);
+      markTouched("images");
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
+  const handleSubmit = () => {
+    // Mark all fields as touched
+    const allFields = Object.keys(form).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {} as TouchedFields);
+    allFields.images = true;
+    setTouched(allFields);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    handleImageChange(e.dataTransfer.files);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      toast.error("Please fix the errors above");
+    if (!isFormValid) {
+      toast.error("Please fix all errors before submitting");
       return;
     }
 
-    const filteredStates = formData.franchiseStates.filter((s) => s.trim());
-
-    mutation.mutate({
-      formData: { ...formData, franchiseStates: filteredStates },
-      images: images.map((img) => img.file),
-    });
+    mutation.mutate();
   };
 
-  return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Create Franchise Listing</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Fill in the details below to list your franchise
+  const getFieldStatus = (fieldName: string) => {
+    if (!touched[fieldName]) return null;
+    return errors[fieldName] ? "error" : "success";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  return hasListings ? (
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4">
+      <Card className="border-border w-full shadow-lg">
+        <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+
+          <h2 className="text-2xl font-semibold">
+            You already have a franchise listing
+          </h2>
+
+          <p className="text-muted-foreground max-w-md">
+            Each account is allowed to create only one franchise listing. You
+            can edit or manage your existing listing from your dashboard.
           </p>
-        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="franchiseName">Franchise Name</Label>
+          <div className="mt-4 flex gap-3">
+            <Button variant="default">Go to Dashboard</Button>
+            <Button variant="outline">View Listing</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  ) : (
+    <div className="mx-auto max-w-6xl px-4 py-10">
+      <Card className="border-border shadow-sm">
+        <CardHeader className="from-background to-accent/5 border-b bg-linear-to-r">
+          <Alert variant={"destructive"}>
+            <AlertTitle>Note</AlertTitle>
+            <AlertDescription>You can only create one listing</AlertDescription>
+          </Alert>
+          <CardTitle className="text-3xl font-semibold">
+            Create Franchise Listing
+          </CardTitle>
+
+          <p className="text-muted-foreground mt-2 text-sm">
+            Fill in all required information to create your franchise listing
+            and reach potential franchisees
+          </p>
+        </CardHeader>
+
+        <CardContent className="space-y-8 pt-6">
+          {/* BASIC INFORMATION */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-4 duration-500">
+            <h3 className="text-foreground text-sm font-medium">
+              Basic Information
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="franchiseName">
+                  Franchise Name <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="franchiseName"
-                    type="text"
-                    value={formData.franchiseName}
-                    onChange={(e) => handleInputChange(e, "franchiseName")}
-                    placeholder="Enter franchise name"
+                    placeholder="e.g., McDonald's India"
+                    value={form.franchiseName}
+                    onChange={(e) => update("franchiseName", e.target.value)}
+                    onBlur={() => markTouched("franchiseName")}
+                    className={`transition-all duration-200 ${
+                      touched.franchiseName
+                        ? errors.franchiseName
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.franchiseName && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.franchiseName}
-                    </p>
+                  {touched.franchiseName && !errors.franchiseName && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.franchiseName && errors.franchiseName && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.franchiseName}
+                  </p>
+                )}
+              </div>
 
-                <div>
-                  <Label htmlFor="yearEstablished">Year Established</Label>
+              <div className="space-y-2">
+                <Label htmlFor="yearEstablished">
+                  Year Established <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="yearEstablished"
                     type="number"
-                    value={formData.yearEstablished}
-                    onChange={(e) => handleInputChange(e, "yearEstablished")}
-                    min="1900"
-                    max={new Date().getFullYear()}
+                    placeholder={`e.g., ${new Date().getFullYear() - 5}`}
+                    value={form.yearEstablished}
+                    onChange={(e) => update("yearEstablished", e.target.value)}
+                    onBlur={() => markTouched("yearEstablished")}
+                    className={`transition-all duration-200 ${
+                      touched.yearEstablished
+                        ? errors.yearEstablished
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.yearEstablished && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.yearEstablished}
-                    </p>
+                  {touched.yearEstablished && !errors.yearEstablished && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.yearEstablished && errors.yearEstablished && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.yearEstablished}
+                  </p>
+                )}
+              </div>
 
-                <div>
-                  <Label htmlFor="totalLocations">Total Locations</Label>
+              <div className="space-y-2">
+                <Label htmlFor="totalLocations">
+                  Total Locations <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="totalLocations"
                     type="number"
-                    value={formData.totalLocations}
-                    onChange={(e) => handleInputChange(e, "totalLocations")}
-                    min="0"
+                    placeholder="e.g., 50"
+                    value={form.totalLocations}
+                    onChange={(e) => update("totalLocations", e.target.value)}
+                    onBlur={() => markTouched("totalLocations")}
+                    className={`transition-all duration-200 ${
+                      touched.totalLocations
+                        ? errors.totalLocations
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.totalLocations && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.totalLocations}
-                    </p>
+                  {touched.totalLocations && !errors.totalLocations && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.totalLocations && errors.totalLocations && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.totalLocations}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Number of existing franchise locations
+                </p>
+              </div>
 
-                <div>
-                  <Label htmlFor="gstNumber">GST Number</Label>
+              <div className="space-y-2">
+                <Label htmlFor="gstNumber">
+                  GST Number <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="gstNumber"
-                    type="text"
-                    value={formData.gstNumber}
-                    onChange={(e) => handleInputChange(e, "gstNumber")}
-                    placeholder="Enter GST number"
+                    placeholder="e.g., 22AAAAA0000A1Z5"
+                    value={form.gstNumber}
+                    onChange={(e) =>
+                      update("gstNumber", e.target.value.toUpperCase())
+                    }
+                    onBlur={() => markTouched("gstNumber")}
+                    maxLength={15}
+                    className={`transition-all duration-200 ${
+                      touched.gstNumber
+                        ? errors.gstNumber
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.gstNumber && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.gstNumber}
-                    </p>
+                  {touched.gstNumber && !errors.gstNumber && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.gstNumber && errors.gstNumber && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.gstNumber}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  15-character GST identification number
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Financial Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Financial Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="minInvestment">Min Investment (₹)</Label>
+          {/* INVESTMENT DETAILS */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-4 delay-100 duration-500">
+            <h3 className="text-foreground text-sm font-medium">
+              Investment Details
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="minInvestment">
+                  Minimum Investment (₹) <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="minInvestment"
                     type="number"
-                    value={formData.minInvestment}
-                    onChange={(e) => handleInputChange(e, "minInvestment")}
-                    min="0"
-                    step="0.01"
+                    placeholder="e.g., 1000000"
+                    value={form.minInvestment}
+                    onChange={(e) => update("minInvestment", e.target.value)}
+                    onBlur={() => markTouched("minInvestment")}
+                    className={`transition-all duration-200 ${
+                      touched.minInvestment
+                        ? errors.minInvestment
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.minInvestment && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.minInvestment}
-                    </p>
+                  {touched.minInvestment && !errors.minInvestment && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.minInvestment && errors.minInvestment && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.minInvestment}
+                  </p>
+                )}
+              </div>
 
-                <div>
-                  <Label htmlFor="maxInvestment">Max Investment (₹)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="maxInvestment">
+                  Maximum Investment (₹) <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="maxInvestment"
                     type="number"
-                    value={formData.maxInvestment}
-                    onChange={(e) => handleInputChange(e, "maxInvestment")}
-                    min="0"
-                    step="0.01"
+                    placeholder="e.g., 5000000"
+                    value={form.maxInvestment}
+                    onChange={(e) => update("maxInvestment", e.target.value)}
+                    onBlur={() => markTouched("maxInvestment")}
+                    className={`transition-all duration-200 ${
+                      touched.maxInvestment
+                        ? errors.maxInvestment
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.maxInvestment && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.maxInvestment}
-                    </p>
+                  {touched.maxInvestment && !errors.maxInvestment && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.maxInvestment && errors.maxInvestment && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.maxInvestment}
+                  </p>
+                )}
+              </div>
 
-                <div>
-                  <Label htmlFor="spaceRequiredSqFt">
-                    Space Required (sq ft)
-                  </Label>
+              <div className="space-y-2">
+                <Label htmlFor="spaceRequiredSqFt">
+                  Space Required (sq ft) <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
                   <Input
                     id="spaceRequiredSqFt"
                     type="number"
-                    value={formData.spaceRequiredSqFt}
-                    onChange={(e) => handleInputChange(e, "spaceRequiredSqFt")}
-                    min="0"
+                    placeholder="e.g., 1000"
+                    value={form.spaceRequiredSqFt}
+                    onChange={(e) =>
+                      update("spaceRequiredSqFt", e.target.value)
+                    }
+                    onBlur={() => markTouched("spaceRequiredSqFt")}
+                    className={`transition-all duration-200 ${
+                      touched.spaceRequiredSqFt
+                        ? errors.spaceRequiredSqFt
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-                  {errors.spaceRequiredSqFt && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.spaceRequiredSqFt}
-                    </p>
+                  {touched.spaceRequiredSqFt && !errors.spaceRequiredSqFt && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
                   )}
                 </div>
+                {touched.spaceRequiredSqFt && errors.spaceRequiredSqFt && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.spaceRequiredSqFt}
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="contactPerson">Contact Person</Label>
-                  <Input
-                    id="contactPerson"
-                    type="text"
-                    value={formData.contactPerson}
-                    onChange={(e) => handleInputChange(e, "contactPerson")}
-                    placeholder="Full name"
-                  />
-                  {errors.contactPerson && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.contactPerson}
-                    </p>
-                  )}
-                </div>
+          {/* FRANCHISE AVAILABILITY */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-4 delay-200 duration-500">
+            <div>
+              <h3 className="text-foreground mb-1 text-sm font-medium">
+                Franchise Availability
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                Select all states and union territories where you are offering
+                franchise opportunities
+              </p>
+            </div>
 
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange(e, "phoneNumber")}
-                    placeholder="+91 98765 43210"
-                  />
-                  {errors.phoneNumber && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.phoneNumber}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange(e, "email")}
-                    placeholder="hello@franchise.com"
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange(e, "website")}
-                    placeholder="https://franchise.com"
-                  />
-                  {errors.website && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.website}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Operating States */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Operating States</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {formData.franchiseStates.map((state, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={state}
-                    onChange={(e) => handleStateChange(index, e.target.value)}
-                    placeholder="Enter state name"
-                  />
-                  {formData.franchiseStates.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeState(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-
-              {formData.franchiseStates.length < 10 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addState}
+            <div className="space-y-2">
+              <Label>
+                Available in States / UTs{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <Combobox
+                multiple
+                autoHighlight
+                items={INDIAN_STATES_AND_UTS}
+                value={form.franchiseStates}
+                onValueChange={(v) => {
+                  update("franchiseStates", v);
+                  markTouched("franchiseStates");
+                  if (v.length > form.franchiseStates.length) {
+                    toast.success(
+                      `${v[v.length - 1]} added to availability list`,
+                    );
+                  }
+                }}
+              >
+                <ComboboxChips
+                  ref={anchor}
+                  className={`transition-all duration-200 ${
+                    touched.franchiseStates
+                      ? errors.franchiseStates
+                        ? "animate-shake border-red-500 focus-within:ring-red-500"
+                        : "border-green-500 focus-within:ring-green-500"
+                      : ""
+                  }`}
                 >
-                  + Add State
-                </Button>
-              )}
+                  <ComboboxValue>
+                    {(values) => (
+                      <>
+                        {values.map((v: any) => (
+                          <ComboboxChip
+                            key={v}
+                            className="animate-in fade-in-0 zoom-in-95 duration-200"
+                          >
+                            {v}
+                          </ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput placeholder="Search and select states where franchise is available..." />
+                      </>
+                    )}
+                  </ComboboxValue>
+                </ComboboxChips>
 
-              {errors.franchiseStates && (
-                <p className="text-xs text-destructive">
+                <ComboboxContent anchor={anchor}>
+                  <ComboboxEmpty>No results</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {touched.franchiseStates && errors.franchiseStates && (
+                <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                  <AlertCircle className="h-3 w-3" />
                   {errors.franchiseStates}
                 </p>
               )}
-            </CardContent>
-          </Card>
+              {form.franchiseStates.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <p className="animate-in fade-in text-xs font-medium text-green-600 duration-200">
+                    ✓ Franchise available in {form.franchiseStates.length}{" "}
+                    location{form.franchiseStates.length !== 1 ? "s" : ""}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {36 - form.franchiseStates.length} more available to select
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
-          {/* Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Franchise Images ({images.length}/3)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {images.length < 3 && (
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  className="border-2 border-dashed border-input rounded-lg p-6 text-center cursor-pointer hover:bg-accent transition"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageChange(e.target.files)}
+          {/* CONTACT INFORMATION */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-4 delay-300 duration-500">
+            <h3 className="text-foreground text-sm font-medium">
+              Contact Information
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="contactPerson">
+                  Contact Person <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="contactPerson"
+                    placeholder="e.g., Rajesh Kumar"
+                    value={form.contactPerson}
+                    onChange={(e) => update("contactPerson", e.target.value)}
+                    onBlur={() => markTouched("contactPerson")}
+                    className={`transition-all duration-200 ${
+                      touched.contactPerson
+                        ? errors.contactPerson
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
                   />
-
-                  <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium">
-                    Drop images here or click to browse
+                  {touched.contactPerson && !errors.contactPerson && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
+                  )}
+                </div>
+                {touched.contactPerson && errors.contactPerson && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.contactPerson}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG, GIF up to 10MB
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">
+                  Phone Number <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="phoneNumber"
+                    placeholder="e.g., 9876543210"
+                    value={form.phoneNumber}
+                    onChange={(e) => update("phoneNumber", e.target.value)}
+                    onBlur={() => markTouched("phoneNumber")}
+                    maxLength={10}
+                    className={`transition-all duration-200 ${
+                      touched.phoneNumber
+                        ? errors.phoneNumber
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
+                  />
+                  {touched.phoneNumber && !errors.phoneNumber && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
+                  )}
+                </div>
+                {touched.phoneNumber && errors.phoneNumber && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.phoneNumber}
                   </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  10-digit mobile number
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Email <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="e.g., contact@franchise.com"
+                    value={form.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    onBlur={() => markTouched("email")}
+                    className={`transition-all duration-200 ${
+                      touched.email
+                        ? errors.email
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
+                  />
+                  {touched.email && !errors.email && (
+                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
+                  )}
                 </div>
-              )}
+                {touched.email && errors.email && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.email}
+                  </p>
+                )}
+              </div>
 
-              {images.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {images.map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative group rounded-lg border overflow-hidden bg-muted"
-                    >
-                      <img
-                        src={image.preview || "/placeholder.svg"}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover"
-                      />
-
-                      {index === 0 && (
-                        <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded text-white">
-                          Cover
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded opacity-0 group-hover:opacity-100 transition"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <div className="relative">
+                  <Input
+                    id="website"
+                    placeholder="e.g., https://www.franchise.com"
+                    value={form.website}
+                    onChange={(e) => update("website", e.target.value)}
+                    onBlur={() => markTouched("website")}
+                    className={`transition-all duration-200 ${
+                      touched.website && form.website.trim()
+                        ? errors.website
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : "border-green-500 focus-visible:ring-green-500"
+                        : ""
+                    }`}
+                  />
+                  {touched.website &&
+                    form.website.trim() &&
+                    !errors.website && (
+                      <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
+                    )}
                 </div>
-              )}
+                {touched.website && errors.website && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.website}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Optional - must include http:// or https://
+                </p>
+              </div>
+            </div>
+          </div>
 
-              {errors.images && (
-                <p className="text-xs text-destructive">{errors.images}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Label htmlFor="description">Detailed Description</Label>
-              <Textarea
-                id="description"
-                value={formData.detailedDescription}
-                onChange={(e) => handleInputChange(e, "detailedDescription")}
-                placeholder="Describe your franchise business, requirements, support provided, and growth opportunities..."
-                rows={4}
-                className="mt-2"
-              />
-
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-xs text-muted-foreground">
-                  {formData.detailedDescription.length} characters
-                </div>
-
-                {errors.detailedDescription && (
-                  <p className="text-xs text-destructive">
+          {/* DESCRIPTION */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-2 delay-500 duration-500">
+            <Label htmlFor="detailedDescription">
+              Detailed Description <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="detailedDescription"
+              placeholder="Provide a comprehensive description of your franchise opportunity, including business model, support provided, training, and what makes your franchise unique..."
+              rows={6}
+              value={form.detailedDescription}
+              onChange={(e) => update("detailedDescription", e.target.value)}
+              onBlur={() => markTouched("detailedDescription")}
+              className={`transition-all duration-200 ${
+                touched.detailedDescription
+                  ? errors.detailedDescription
+                    ? "border-red-500 focus-visible:ring-red-500"
+                    : "border-green-500 focus-visible:ring-green-500"
+                  : ""
+              }`}
+            />
+            <div className="flex items-center justify-between">
+              <div>
+                {touched.detailedDescription && errors.detailedDescription && (
+                  <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                    <AlertCircle className="h-3 w-3" />
                     {errors.detailedDescription}
                   </p>
                 )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Submit Button */}
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              disabled={mutation.isPending}
-              className="w-full"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating...
-                </>
-              ) : (
-                "Create Listing"
-              )}
-            </Button>
+              <p
+                className={`text-xs transition-colors duration-200 ${
+                  form.detailedDescription.trim().length >= 50
+                    ? "font-medium text-green-600"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {form.detailedDescription.trim().length}/50 characters minimum
+              </p>
+            </div>
           </div>
-        </form>
-      </div>
+
+          {/* IMAGES */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 space-y-3 delay-700 duration-500">
+            <Label>
+              Franchise Images <span className="text-red-500">*</span>
+            </Label>
+
+            <div
+              onClick={() => fileRef.current?.click()}
+              className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-all duration-300 ${
+                touched.images && errors.images
+                  ? "border-red-500 bg-red-50 hover:bg-red-100"
+                  : images.length > 0
+                    ? "border-green-500 bg-green-50 hover:border-green-600 hover:bg-green-100"
+                    : "border-border hover:border-primary hover:bg-accent hover:shadow-md"
+              }`}
+            >
+              <Upload
+                className={`mx-auto mb-3 h-10 w-10 transition-all duration-300 ${
+                  images.length > 0 ? "text-green-600" : "text-muted-foreground"
+                }`}
+              />
+              <p className="mb-1 text-sm font-medium transition-colors duration-200">
+                {images.length === 0
+                  ? "Click to upload franchise images"
+                  : `${images.length}/3 images uploaded`}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Upload up to 3 images • Max 5MB each • JPG, PNG, WEBP
+              </p>
+              <input
+                ref={fileRef}
+                type="file"
+                hidden
+                multiple
+                accept="image/*"
+                onChange={(e) => handleImages(e.target.files)}
+              />
+            </div>
+
+            {touched.images && errors.images && (
+              <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
+                <AlertCircle className="h-3 w-3" />
+                {errors.images}
+              </p>
+            )}
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {images.map((img, i) => (
+                  <div
+                    key={i}
+                    className="group animate-in zoom-in-95 fade-in relative duration-300"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    <img
+                      src={URL.createObjectURL(img)}
+                      alt={`Preview ${i + 1}`}
+                      className="h-32 w-full rounded-lg border object-cover transition-all duration-200 group-hover:scale-[1.02] group-hover:shadow-lg"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImages((p) => p.filter((_, x) => x !== i));
+                        toast.success("Image removed");
+                      }}
+                      className="absolute top-2 right-2 rounded-md bg-black/70 p-1.5 text-white opacity-0 transition-all duration-200 group-hover:opacity-100 hover:scale-110 hover:bg-black"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white transition-opacity duration-200">
+                      Image {i + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SUBMIT BUTTON */}
+          <div className="animate-in fade-in-50 slide-in-from-bottom-4 pt-4 delay-1000 duration-500">
+            <Button
+              className="h-11 w-full transition-all duration-300 hover:shadow-lg disabled:opacity-50"
+              disabled={!isFormValid || mutation.isPending}
+              onClick={handleSubmit}
+            >
+              {mutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {mutation.isPending
+                ? "Creating Franchise..."
+                : "Create Franchise Listing"}
+            </Button>
+
+            {!isFormValid && Object.keys(touched).length > 0 && (
+              <p className="animate-in fade-in mt-3 flex items-center justify-center gap-1 text-center text-xs text-amber-600 duration-300">
+                <AlertCircle className="h-3 w-3" />
+                Please complete all required fields correctly to submit
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

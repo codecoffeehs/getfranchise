@@ -4,73 +4,112 @@ import { verifyToken } from "@/lib/jwt-utils";
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ✅ Public routes that don't require authentication
+  const isPublic = pathname === "/";
+
+  // ✅ Auth routes (login, register, etc.)
   const isAuthRoute = pathname.startsWith("/auth");
-  const isUserDashboard = pathname.startsWith("/dashboard/user");
-  const isFranchiseDashboard = pathname.startsWith(
-    "/dashboard/franchise-owner",
-  );
 
   const token = (await cookies()).get("_gf_")?.value;
 
-  /* ------------------ NO TOKEN ------------------ */
+  // Handle unauthenticated users
   if (!token) {
-    if (pathname === "/" || isAuthRoute) {
+    if (isPublic || isAuthRoute) {
       return NextResponse.next();
     }
-    return NextResponse.redirect(new URL("/auth/user", req.url));
+    // ⛔ No token and protected route → redirect to login
+    return NextResponse.redirect(new URL("/auth/user?mode=register", req.url));
   }
 
-  /* ------------------ VERIFY TOKEN ------------------ */
-  const decoded = await verifyToken(token);
-  if (!decoded) {
-    const res = NextResponse.redirect(new URL("/auth/user", req.url));
-    res.cookies.delete("token");
-    return res;
+  // Verify token for authenticated users
+  const result = await verifyToken(token);
+  if (!result) {
+    // ⛔ Invalid or expired token → force login
+    const response = NextResponse.redirect(
+      new URL("/auth/user?mode=login", req.url),
+    );
+    // Clear the invalid token
+    response.cookies.delete("_gf_");
+    return response;
   }
 
-  const { role } = decoded;
+  const { role } = result;
 
-  /* ------------------ BLOCK AUTH ROUTES ------------------ */
+  // ✅ Prevent authenticated users from accessing auth pages
   if (isAuthRoute) {
-    // Redirect logged-in users to their appropriate dashboard
+    // Redirect to appropriate dashboard based on role
+    if (role === "User") {
+      return NextResponse.redirect(new URL("/dashboard/user", req.url));
+    }
     if (role === "FranchiseOwner") {
+      return NextResponse.redirect(new URL("/dashboard/franchise", req.url));
+    }
+  }
+
+  // 🔒 Prevent authenticated users from accessing root route
+  if (isPublic) {
+    // Redirect authenticated users to their dashboard
+    if (role === "User") {
+      return NextResponse.redirect(new URL("/dashboard/user", req.url));
+    }
+    if (role === "FranchiseOwner") {
+      return NextResponse.redirect(new URL("/dashboard/franchise", req.url));
+    }
+  }
+
+  // 🔒 Role-based access control for dashboard routes
+  if (pathname.startsWith("/dashboard/user")) {
+    if (role !== "User") {
+      // ⛔ Seller trying to access buyer dashboard
       return NextResponse.redirect(
         new URL("/dashboard/franchise-owner", req.url),
       );
     }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/dashboard/franchise-owner")) {
+    if (role !== "FranchiseOwner") {
+      // ⛔ Buyer trying to access seller dashboard
+      return NextResponse.redirect(new URL("/dashboard/user", req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // ✅ Root dashboard redirect based on role
+  if (pathname === "/dashboard") {
     if (role === "User") {
       return NextResponse.redirect(new URL("/dashboard/user", req.url));
     }
+    if (role === "FranchiseOwner") {
+      return NextResponse.redirect(new URL("/dashboard/franchise", req.url));
+    }
   }
 
-  /* ------------------ ROLE BASED ACCESS ------------------ */
-  // User trying to access franchise dashboard
-  if (isFranchiseDashboard && role !== "FranchiseOwner") {
+  // ❌ Unknown route or role → redirect to appropriate dashboard
+  if (role === "User") {
     return NextResponse.redirect(new URL("/dashboard/user", req.url));
   }
-
-  // Franchise owner trying to access user dashboard
-  if (isUserDashboard && role !== "User") {
+  if (role === "FranchiseOwner") {
     return NextResponse.redirect(
       new URL("/dashboard/franchise-owner", req.url),
     );
   }
 
-  /* ------------------ DEFAULT DASHBOARD ------------------ */
-  if (pathname === "/dashboard" || pathname === "/") {
-    if (role === "FranchiseOwner") {
-      return NextResponse.redirect(
-        new URL("/dashboard/franchise-owner", req.url),
-      );
-    }
-    if (role === "User") {
-      return NextResponse.redirect(new URL("/dashboard/user", req.url));
-    }
-  }
-
-  return NextResponse.next();
+  // ❌ Fallback
+  return NextResponse.redirect(new URL("/auth/user?mode=login", req.url));
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+  ],
 };

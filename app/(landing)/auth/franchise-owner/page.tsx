@@ -216,7 +216,7 @@ export default function FranchiseOwnerAuthPage() {
       ),
     onSuccess: () => {
       toast.success("Signed in successfully");
-      router.replace("/dashboard/franchise");
+      router.replace("/dashboard/franchise-owner");
     },
     onError: (err) =>
       toast.error(

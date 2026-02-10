@@ -27,7 +27,7 @@ const Navbar = () => {
         <div className="flex items-center gap-3">
           {/* Franchise Owner – Secondary */}
           <Link
-            href="/auth/franchise-owner?mode=signup"
+            href="/auth/franchise-owner?mode=register"
             className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground transition"
           >
             List Your Franchise
