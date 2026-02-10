@@ -18,6 +18,7 @@ import {
   Maximize,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 /* ================================
    Types
@@ -129,18 +130,26 @@ export default function FranchiseDashboardPage() {
           label="Total Views"
           value={data.totalViews.toLocaleString()}
           icon={Eye}
+          borderColor="border-l-green-500 border-b-green-500"
         />
         <KpiBlock
           label="Avg Views / Day"
           value={data.avgViewsPerDay.toFixed(1)}
           icon={TrendingUp}
+          borderColor="border-l-blue-500 border-b-blue-500"
         />
         <KpiBlock
           label="Performance"
           value={data.performanceLevel}
           icon={BarChart3}
+          borderColor="border-l-amber-500 border-b-amber-500"
         />
-        <KpiBlock label="Days Live" value={data.daysLive} icon={Clock} />
+        <KpiBlock
+          label="Days Live"
+          value={data.daysLive}
+          icon={Clock}
+          borderColor="border-l-purple-500 border-b-purple-500"
+        />
       </div>
 
       {/* ================= DETAILS ================= */}
@@ -148,11 +157,11 @@ export default function FranchiseDashboardPage() {
         {/* Business */}
         <Card className="rounded-lg border-2">
           <CardHeader className="border-b">
-            <CardTitle className="text-base font-semibold">
+            <CardTitle className="text-2xl font-semibold">
               Business Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5 pt-6">
+          <CardContent className="space-y-5">
             <InfoRow
               icon={Calendar}
               label="Year Established"
@@ -179,7 +188,7 @@ export default function FranchiseDashboardPage() {
         {/* Reach */}
         <Card className="rounded-lg border-2">
           <CardHeader className="border-b">
-            <CardTitle className="text-base font-semibold">
+            <CardTitle className="text-2xl font-semibold">
               Reach & Presence
             </CardTitle>
           </CardHeader>
@@ -224,13 +233,15 @@ function KpiBlock({
   label,
   value,
   icon: Icon,
+  borderColor,
 }: {
   label: string;
   value: React.ReactNode;
   icon: any;
+  borderColor: string;
 }) {
   return (
-    <Card className="rounded-lg border-2">
+    <Card className={cn(`rounded-lg border-b-4 border-l-4 ${borderColor}`)}>
       <CardContent className="flex items-center justify-between p-6">
         <div>
           <p className="text-muted-foreground text-xs font-medium">{label}</p>
