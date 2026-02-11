@@ -1,9 +1,8 @@
+import UserNavbar from "@/components/common/user-navbar";
 import type { Metadata } from "next";
 
-import FranchiseOwnerNavbar from "@/components/common/franchise-owner-navbar";
-
 export const metadata: Metadata = {
-  title: "Dashboard - Get Franchise",
+  title: "Get Franchise",
   description: "List Your Franchise",
 };
 
@@ -14,7 +13,7 @@ export default function DashboardLayout({
 }>) {
   return (
     <>
-      <FranchiseOwnerNavbar />
+      <UserNavbar />
       {children}
     </>
   );

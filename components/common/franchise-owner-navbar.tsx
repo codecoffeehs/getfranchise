@@ -15,26 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Settings, User, Menu, Plus, LayoutGrid } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-
-/* ------------------ simple helpers ------------------ */
-
-// const getInitialsFromEmail = (email?: string) => {
-//   if (!email) return "??";
-
-//   const name = email.split("@")[0];
-//   const parts = name.split(/[._-]/);
-
-//   return parts
-//     .filter(Boolean)
-//     .slice(0, 2)
-//     .map((p) => p[0].toUpperCase())
-//     .join("")
-//     .padEnd(2, parts[0]?.[0]?.toUpperCase() ?? "?");
-// };
 
 /* ------------------ api call ------------------ */
 
@@ -47,7 +31,7 @@ const fetchMe = async () => {
 
 /* ------------------ component ------------------ */
 
-const Navbar = () => {
+const FranchiseOwnerNavbar = () => {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
@@ -191,4 +175,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default FranchiseOwnerNavbar;
