@@ -12,10 +12,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, IndianRupee, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  IndianRupee,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Filter,
+} from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
+/* -------------------- Constants -------------------- */
+
+const MIN_RANGE = 0;
+const MAX_RANGE = 20000000; // 2 Crore
 
 /* -------------------- Types -------------------- */
 
@@ -38,18 +50,25 @@ const searchFranchises = async ({
   search,
   page,
   state,
+  maxInvestment,
 }: {
   search: string;
   page: number;
-  state: string | null;
+  state: string;
+  maxInvestment: number | null;
 }): Promise<SearchResponse> => {
   const params = new URLSearchParams();
 
   if (search) params.append("search", search);
   params.append("page", page.toString());
 
-  // ✅ Only append state if it exists (not null)
-  if (state) params.append("state", state);
+  if (state && state !== "All") params.append("state", state);
+
+  // ✅ Only send if user enabled budget filter
+  if (maxInvestment !== null) {
+    params.append("minInvestment", "0");
+    params.append("maxInvestment", maxInvestment.toString());
+  }
 
   const { data } = await axios.get<SearchResponse>(
     `http://localhost:5151/api/franchise/search-franchise?${params.toString()}`,
@@ -62,61 +81,40 @@ const searchFranchises = async ({
 
 const indianStatesAndUTs = [
   "All",
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
   "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
   "Delhi",
+  "Karnataka",
+  "Tamil Nadu",
+  "Gujarat",
+  "Uttar Pradesh",
 ];
 
 /* -------------------- Component -------------------- */
 
 export default function BrowseFranchisesPage() {
-  const [searchInput, setSearchInput] = useState("");
-  const [selectedState, setSelectedState] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // ✅ state is now string | null
-  const [appliedFilters, setAppliedFilters] = useState<{
-    search: string;
-    state: string | null;
-  }>({
-    search: "",
-    state: null,
-  });
-
-  const [hasSearched, setHasSearched] = useState(false);
   const router = useRouter();
 
-  const { data, isLoading, isError } = useQuery<SearchResponse>({
+  const [searchInput, setSearchInput] = useState("");
+  const [selectedState, setSelectedState] = useState("All");
+
+  const [budgetEnabled, setBudgetEnabled] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: "",
+    state: "All",
+    maxInvestment: null as number | null,
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const { data, isLoading } = useQuery<SearchResponse>({
     queryKey: [
       "franchises",
       appliedFilters.search,
       appliedFilters.state,
+      appliedFilters.maxInvestment,
       currentPage,
     ],
     queryFn: () =>
@@ -124,260 +122,310 @@ export default function BrowseFranchisesPage() {
         search: appliedFilters.search,
         page: currentPage,
         state: appliedFilters.state,
+        maxInvestment: appliedFilters.maxInvestment,
       }),
     enabled: hasSearched,
   });
 
+  const formatAmount = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)} Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`;
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
+
+  const handleBudgetInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setBudgetInput(value);
+    }
+  };
+
   const handleSearch = () => {
+    if (!searchInput.trim()) {
+      toast.error("Please enter a search query");
+      return;
+    }
+
+    let budget = null;
+
+    if (budgetEnabled) {
+      if (!budgetInput) {
+        toast.error("Please enter a budget amount");
+        return;
+      }
+
+      budget = Number(budgetInput);
+
+      if (isNaN(budget) || budget <= 0) {
+        toast.error("Please enter a valid budget amount");
+        return;
+      }
+    }
+
     setAppliedFilters({
       search: searchInput,
-      state: selectedState === "All" ? null : selectedState, // ✅ convert All to null
+      state: selectedState,
+      maxInvestment: budget,
     });
 
     setCurrentPage(1);
     setHasSearched(true);
   };
 
-  const handleKeyUp = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      if (searchInput.trim().length === 0) {
-        toast.error("Please Provide A Search Value");
-        return;
-      }
-      handleSearch();
-    }
+  const clearBudgetFilter = () => {
+    setBudgetEnabled(false);
+    setBudgetInput("");
+    setAppliedFilters((prev) => ({
+      ...prev,
+      maxInvestment: null,
+    }));
   };
 
-  const formatInvestment = (min: number, max: number) => {
-    const formatAmount = (amount: number) => {
-      if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)} Cr`;
-      if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`;
-      return `₹${amount.toLocaleString("en-IN")}`;
-    };
-    return `${formatAmount(min)} - ${formatAmount(max)}`;
+  const clearFilters = () => {
+    setSearchInput("");
+    setSelectedState("All");
+    setBudgetEnabled(false);
+    setBudgetInput("");
+    setAppliedFilters({
+      search: "",
+      state: "All",
+      maxInvestment: null,
+    });
+    setHasSearched(false);
   };
+
+  const hasBudgetFilter = appliedFilters.maxInvestment !== null;
 
   const totalPages = data?.totalPages || 1;
   const franchises = data?.result || [];
 
+  // Build search summary text
+  const getSearchSummary = () => {
+    const parts = [];
+
+    if (appliedFilters.search) {
+      parts.push(appliedFilters.search);
+    }
+
+    if (appliedFilters.state !== "All") {
+      parts.push(`in ${appliedFilters.state}`);
+    }
+
+    if (hasBudgetFilter) {
+      parts.push(
+        `with budget up to ${formatAmount(appliedFilters.maxInvestment!)}`,
+      );
+    }
+
+    return parts.join(" ");
+  };
+
   return (
     <div className="bg-background min-h-screen">
-      {/* ---------- Top Search Section ---------- */}
+      {/* Search Section */}
       <div className="bg-muted/40 border-b">
-        <div className="mx-auto max-w-7xl space-y-4 px-6 py-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Browse Franchises
-          </h1>
+        <div className="mx-auto max-w-7xl space-y-6 px-6 py-6">
+          <h1 className="text-2xl font-semibold">Browse Franchises</h1>
 
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                placeholder="Search franchises..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyUp={handleKeyUp}
-                className="pl-9"
-              />
+          <div className="flex flex-col gap-4">
+            {/* Main Search Row */}
+            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  placeholder="Search franchises..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* State */}
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="State" />
+                </SelectTrigger>
+                <SelectContent>
+                  {indianStatesAndUTs.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button onClick={handleSearch} disabled={!searchInput.trim()}>
+                Search
+              </Button>
             </div>
 
-            <Select value={selectedState} onValueChange={setSelectedState}>
-              <SelectTrigger className="w-full md:w-56">
-                <SelectValue placeholder="State" />
-              </SelectTrigger>
-              <SelectContent>
-                {indianStatesAndUTs.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Budget Filter Row */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="text-muted-foreground h-4 w-4" />
+                  <span className="text-sm font-medium">Filters</span>
+                </div>
 
-            <Button
-              disabled={searchInput.trim().length === 0}
-              onClick={handleSearch}
-            >
-              Search
-            </Button>
+                <div className="flex flex-1 items-center gap-4">
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={budgetEnabled}
+                      onChange={(e) => {
+                        setBudgetEnabled(e.target.checked);
+                        if (!e.target.checked) {
+                          setBudgetInput("");
+                        }
+                      }}
+                      className="text-primary focus:ring-primary h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium">Budget Filter</span>
+                  </label>
+
+                  {budgetEnabled && (
+                    <div className="flex max-w-xs flex-1 items-center gap-2">
+                      <div className="relative flex-1">
+                        <IndianRupee className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                        <Input
+                          type="text"
+                          placeholder="Enter max budget"
+                          value={budgetInput}
+                          onChange={handleBudgetInputChange}
+                          className="pl-9"
+                        />
+                      </div>
+                      {budgetInput &&
+                        !isNaN(Number(budgetInput)) &&
+                        Number(budgetInput) > 0 && (
+                          <span className="text-muted-foreground text-sm whitespace-nowrap">
+                            {formatAmount(Number(budgetInput))}
+                          </span>
+                        )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ---------- Results Section ---------- */}
+      {/* Results */}
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
         {hasSearched && (
           <>
-            {/* -------- Results Header -------- */}
-            <div className="flex flex-col gap-4 border-b pb-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">
-                  {isLoading ? "Searching..." : `${franchises.length} Results`}
-                </h2>
-
-                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-                  {appliedFilters.search && (
-                    <span>
-                      for{" "}
-                      <span className="text-foreground font-medium">
-                        "{appliedFilters.search}"
-                      </span>
-                    </span>
-                  )}
-
-                  {/* ✅ Show state only if selected */}
-                  {appliedFilters.state && (
-                    <span>
-                      in{" "}
-                      <span className="text-foreground font-medium">
-                        {appliedFilters.state}
-                      </span>
-                    </span>
-                  )}
+            {/* Search Results Header */}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1">
+                  <h2 className="text-foreground text-2xl font-bold">
+                    Search Results
+                  </h2>
+                  <p className="text-muted-foreground mt-2 text-base">
+                    {franchises.length > 0 ? (
+                      <>
+                        Found{" "}
+                        <span className="font-semibold">
+                          {franchises.length}
+                        </span>{" "}
+                        franchise
+                        {franchises.length !== 1 ? "s" : ""} for{" "}
+                        <span className="font-semibold">
+                          {getSearchSummary()}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        No results found for{" "}
+                        <span className="font-semibold">
+                          {getSearchSummary()}
+                        </span>
+                      </>
+                    )}
+                  </p>
                 </div>
+
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear All Filters
+                </Button>
               </div>
 
-              {(appliedFilters.search || appliedFilters.state) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchInput("");
-                    setSelectedState("All");
-                    setAppliedFilters({ search: "", state: null });
-                    setHasSearched(false);
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
+              {/* Active Filters Display */}
+              <div className="flex flex-wrap items-center gap-2">
+                {appliedFilters.search && (
+                  <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium">
+                    <Search className="h-3.5 w-3.5" />
+                    <span>{appliedFilters.search}</span>
+                  </div>
+                )}
+
+                {appliedFilters.state !== "All" && (
+                  <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium">
+                    <span>📍 {appliedFilters.state}</span>
+                  </div>
+                )}
+
+                {hasBudgetFilter && (
+                  <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium">
+                    <IndianRupee className="h-3.5 w-3.5" />
+                    <span>
+                      Up to {formatAmount(appliedFilters.maxInvestment!)}
+                    </span>
+                    <button
+                      onClick={clearBudgetFilter}
+                      className="hover:bg-primary/20 ml-1 rounded-full p-0.5 transition-colors"
+                      aria-label="Clear budget filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* -------- Loading -------- */}
-            {isLoading && (
+            {/* Grid */}
+            {!isLoading && franchises.length > 0 && (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card key={i}>
-                    <div className="bg-muted h-40 animate-pulse" />
-                    <CardContent className="space-y-3 py-4">
-                      <div className="bg-muted h-4 animate-pulse rounded" />
-                      <div className="bg-muted h-4 w-1/2 animate-pulse rounded" />
+                {franchises.map((franchise) => (
+                  <Card key={franchise.id}>
+                    <div className="bg-muted h-40">
+                      {franchise.imageUrl && (
+                        <img
+                          src={franchise.imageUrl || "/placeholder.svg"}
+                          alt={franchise.franchiseName}
+                          className="h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
+
+                    <CardHeader>
+                      <CardTitle>{franchise.franchiseName}</CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                        <IndianRupee className="h-4 w-4" />
+                        {formatAmount(franchise.minInvestment)} -{" "}
+                        {formatAmount(franchise.maxInvestment)}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        className="mt-4 w-full bg-transparent"
+                        onClick={() =>
+                          router.replace(
+                            `/dashboard/user/franchise/${franchise.id}`,
+                          )
+                        }
+                      >
+                        View Details
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
-            )}
-
-            {/* -------- Error -------- */}
-            {isError && (
-              <div className="text-destructive text-sm">
-                Failed to load franchises.
-              </div>
-            )}
-
-            {/* -------- Results Grid -------- */}
-            {!isLoading && franchises.length > 0 && (
-              <>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {franchises.map((franchise) => (
-                    <Card
-                      key={franchise.id}
-                      className="transition hover:shadow-sm"
-                    >
-                      <div className="bg-muted h-40 w-full">
-                        {franchise.imageUrl && (
-                          <img
-                            src={franchise.imageUrl}
-                            alt={franchise.franchiseName}
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                      </div>
-
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          {franchise.franchiseName}
-                        </CardTitle>
-                      </CardHeader>
-
-                      <CardContent className="space-y-4">
-                        <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                          <IndianRupee className="h-4 w-4" />
-                          {formatInvestment(
-                            franchise.minInvestment,
-                            franchise.maxInvestment,
-                          )}
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() =>
-                            router.replace(
-                              `/dashboard/user/franchise/${franchise.id}`,
-                            )
-                          }
-                        >
-                          View Details
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* -------- Pagination -------- */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-6">
-                    <p className="text-muted-foreground text-sm">
-                      Page {currentPage} of {totalPages}
-                    </p>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === 1}
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentPage === totalPages}
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* -------- Empty -------- */}
-            {!isLoading && franchises.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                <p className="text-muted-foreground text-sm">
-                  No franchises found for your search.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchInput("");
-                    setSelectedState("All");
-                    setAppliedFilters({ search: "", state: null });
-                    setHasSearched(false);
-                  }}
-                >
-                  Clear Filters
-                </Button>
               </div>
             )}
           </>

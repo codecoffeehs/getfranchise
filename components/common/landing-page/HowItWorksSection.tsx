@@ -1,6 +1,4 @@
 "use client";
-import TargetCursor from "@/components/TargetCursor";
-
 const steps = [
   {
     title: "Browse Franchises",
@@ -45,7 +43,7 @@ const HowItWorksSection = () => {
         <h2 className="mb-4 text-4xl font-bold">
           How <span className="text-primary">GetFranchise</span> Works
         </h2>
-        <p className="mb-16 max-w-2xl text-muted-foreground">
+        <p className="text-muted-foreground mb-16 max-w-2xl">
           A simple, transparent way to discover and connect with franchise
           brands.
         </p>
@@ -59,9 +57,9 @@ const HowItWorksSection = () => {
           {steps.map((step, index) => (
             <div
               key={index}
-              className="relative rounded-xl border bg-background p-8 cursor-target"
+              className="bg-background cursor-target relative rounded-xl border p-8"
             >
-              <span className="absolute -top-4 left-6 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground">
+              <span className="bg-primary text-primary-foreground absolute -top-4 left-6 rounded-full px-4 py-1 text-sm font-semibold">
                 Step {index + 1}
               </span>
 

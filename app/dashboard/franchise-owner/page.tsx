@@ -2,7 +2,16 @@
 
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Player } from "@lottiefiles/react-lottie-player";
+import animationData from "../../../public/thinking.json";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -19,7 +28,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-
+import Link from "next/link";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 /* ================================
    Types
 ================================ */
@@ -85,8 +95,35 @@ export default function FranchiseDashboardPage() {
 
   if (!data) {
     return (
-      <div className="text-muted-foreground flex min-h-[60vh] items-center justify-center">
-        No dashboard data available.
+      <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
+        {/* Lottie Animation */}
+        <div className="-mt-20 w-full max-w-sm sm:max-w-md">
+          <Player autoplay loop src={animationData} className="h-full w-full" />
+        </div>
+
+        {/* Content */}
+        <div className="max-w-xl space-y-4">
+          <h2 className="text-xl font-bold tracking-tight sm:text-4xl">
+            No Franchise Data Yet
+          </h2>
+
+          <p className="text-muted-foreground text-lg">
+            You haven’t added any franchise listings to your dashboard. Start
+            building your franchise portfolio today.
+          </p>
+
+          <div className="pt-4">
+            <Button
+              size="lg"
+              className="shadow-md transition-all duration-300 hover:scale-105"
+              asChild
+            >
+              <Link href="/dashboard/franchise-owner/list-franchise">
+                Add Your First Franchise
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

@@ -4,7 +4,7 @@ import React from "react";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -35,11 +35,14 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 
 /* ================================
    Types
@@ -106,6 +109,7 @@ function EditFranchiseDialog({
   const [images, setImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
+
   const [form, setForm] = useState<EditFormState>({});
 
   const handleImageUpload = (files: FileList | null) => {
@@ -603,7 +607,8 @@ function EditFranchiseDialog({
 export default function FranchisePage() {
   const { id } = useParams<{ id: string }>();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-
+  // const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const router = useRouter();
   const { data, isLoading } = useQuery<FranchiseResponseDto>({
     queryKey: ["franchise", id],
     queryFn: async () => {
@@ -614,7 +619,17 @@ export default function FranchisePage() {
     },
     enabled: !!id,
   });
-
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await axios.delete(`http://localhost:5151/api/franchise/${id}`, {
+        withCredentials: true,
+      });
+    },
+    onSuccess: () => {
+      router.replace(`/dashboard/user`);
+      toast.success("Franchise Deleted");
+    },
+  });
   /* ---------- Loading ---------- */
   if (isLoading) {
     return (
@@ -641,7 +656,40 @@ export default function FranchisePage() {
               <h1 className="text-3xl font-semibold">{data.franchiseName}</h1>
               <Badge variant="outline">{data.status}</Badge>
             </div>
-            <Button onClick={() => setEditDialogOpen(true)}>Edit</Button>
+            <div className="flex items-center justify-center gap-3">
+              <Button onClick={() => setEditDialogOpen(true)}>Edit</Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant={"destructive"}>Delete</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete This Franchise Listing?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently delete your listing. This action
+                      cannot be reversed
+                    </DialogDescription>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant={"outline"}>Cancel</Button>
+                      </DialogClose>
+                      {deleteMutation.isPending ? (
+                        <Button>
+                          <Spinner />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant={"destructive"}
+                          onClick={() => deleteMutation.mutate(id)}
+                        >
+                          Confirm Delete
+                        </Button>
+                      )}
+                    </DialogFooter>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           <div className="text-muted-foreground flex flex-wrap gap-6 text-sm">

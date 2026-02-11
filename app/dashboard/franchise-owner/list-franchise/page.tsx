@@ -387,10 +387,10 @@ export default function CreateFranchiseForm() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <Card className="border-border shadow-sm">
         <CardHeader className="from-background to-accent/5 border-b bg-linear-to-r">
-          <Alert variant={"destructive"}>
+          {/* <Alert variant={"destructive"}>
             <AlertTitle>Note</AlertTitle>
             <AlertDescription>You can only create one listing</AlertDescription>
-          </Alert>
+          </Alert> */}
           <CardTitle className="text-3xl font-semibold">
             Create Franchise Listing
           </CardTitle>
