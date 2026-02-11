@@ -41,12 +41,7 @@ const UserNavbar = () => {
     queryFn: fetchMe,
   });
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard/user" },
-    { label: "Browse Franchises", href: "/dashboard/user/browse-franchises" },
-  ];
-
-  const isActive = (href: string) => pathname === href;
+  const navItems = [{ label: "Dashboard", href: "/dashboard/user" }];
 
   const logout = async () => {
     await axios.post(
@@ -84,11 +79,12 @@ const UserNavbar = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                  isActive(item.href)
-                    ? "bg-slate-100 text-slate-900"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                // className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                //   isActive(item.href)
+                //     ? "bg-slate-100 text-slate-900"
+                //     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                // }`}
+                className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 transition-colors"
               >
                 {item.label}
               </Link>
@@ -157,11 +153,12 @@ const UserNavbar = () => {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`rounded-md px-4 py-2 text-sm font-medium ${
-                        isActive(item.href)
-                          ? "bg-slate-100 text-slate-900"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      }`}
+                      // className={`rounded-md px-4 py-2 text-sm font-medium ${
+                      //   isActive(item.href)
+                      //     ? "bg-slate-100 text-slate-900"
+                      //     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      // }`}
+                      className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 transition-colors"
                     >
                       {item.label}
                     </Link>

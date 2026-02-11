@@ -21,6 +21,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import axios from "axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 /* -------------------- Types -------------------- */
 
@@ -105,7 +107,7 @@ export default function BrowseFranchisesPage() {
     state: "All",
   });
   const [hasSearched, setHasSearched] = useState(false);
-
+  const router = useRouter();
   const { data, isLoading, isError } = useQuery<SearchResponse>({
     queryKey: [
       "franchises",
@@ -131,8 +133,12 @@ export default function BrowseFranchisesPage() {
     setHasSearched(true);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyUp = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      if (searchInput.trim().length === 0) {
+        toast.error("Please Provide A Search Value");
+        return;
+      }
       handleSearch();
     }
   };
@@ -165,7 +171,7 @@ export default function BrowseFranchisesPage() {
                 placeholder="Search franchises..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
                 className="pl-9"
               />
             </div>
@@ -183,7 +189,12 @@ export default function BrowseFranchisesPage() {
               </SelectContent>
             </Select>
 
-            <Button onClick={handleSearch}>Search</Button>
+            <Button
+              disabled={searchInput.trim().length === 0}
+              onClick={handleSearch}
+            >
+              Search
+            </Button>
           </div>
         </div>
       </div>
@@ -297,7 +308,9 @@ export default function BrowseFranchisesPage() {
                           variant="outline"
                           className="w-full"
                           onClick={() =>
-                            (window.location.href = `/franchises/${franchise.id}`)
+                            router.replace(
+                              `/dashboard/user/browse-franchises/franchise/${franchise.id}`,
+                            )
                           }
                         >
                           View Details
