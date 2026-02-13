@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import axios, { isAxiosError } from "axios";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Card,
@@ -56,7 +55,7 @@ function AccountStep({
 
       <Button
         size="lg"
-        className="w-full mt-2"
+        className="mt-2 w-full"
         disabled={!canContinue || isPending}
         onClick={onContinue}
       >
@@ -86,7 +85,7 @@ function OtpStep({
           }
           inputMode="numeric"
           maxLength={6}
-          className="h-14 text-center text-2xl font-mono"
+          className="h-14 text-center font-mono text-2xl"
           placeholder="Enter OTP"
         />
       </div>
@@ -164,12 +163,12 @@ function OtpStep({
 
 export default function FranchiseOwnerAuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
-  const urlMode =
-    searchParams.get("mode") === "register" ? "register" : "login";
+  // const urlMode =
+  //   searchParams.get("mode") === "register" ? "register" : "login";
 
-  const [mode, setMode] = useState<Mode>(urlMode);
+  const [mode, setMode] = useState<Mode>("login");
   const [step, setStep] = useState<Step>(1);
   const [otp, setOtp] = useState("");
 
@@ -187,10 +186,10 @@ export default function FranchiseOwnerAuthPage() {
     setOtp("");
   }, []);
 
-  useEffect(() => {
-    setMode(urlMode);
-    resetFlow();
-  }, [urlMode, resetFlow]);
+  // useEffect(() => {
+  //   setMode(urlMode);
+  //   resetFlow();
+  // }, [urlMode, resetFlow]);
 
   const clean = (v: string) => v.replace(/\s/g, "");
 
@@ -271,23 +270,23 @@ export default function FranchiseOwnerAuthPage() {
   //   onError: () => toast.error("Submission failed"),
   // });
 
-  const onTabChange = (next: Mode) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("mode", next);
-    router.replace(`?${params.toString()}`, { scroll: false });
-    resetFlow();
-  };
+  // const onTabChange = (next: Mode) => {
+  //   const params = new URLSearchParams(searchParams.toString());
+  //   params.set("mode", next);
+  //   router.replace(`?${params.toString()}`, { scroll: false });
+  //   resetFlow();
+  // };
 
   /* ------------------ UI ------------------ */
 
   return (
-    <section className="h-[calc(100dvh-4rem)] w-full grid grid-cols-1 lg:grid-cols-2">
+    <section className="grid h-[calc(100dvh-4rem)] w-full grid-cols-1 lg:grid-cols-2">
       {/* LEFT PANEL */}
-      <div className="hidden lg:flex flex-col justify-center px-12 xl:px-16 bg-muted">
-        <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
+      <div className="bg-muted hidden flex-col justify-center px-12 lg:flex xl:px-16">
+        <h1 className="text-4xl font-bold tracking-tight xl:text-5xl">
           List your franchise.
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="text-muted-foreground text-lg">
           Reach verified investors. No brokers. No noise.
         </p>
       </div>
@@ -295,7 +294,7 @@ export default function FranchiseOwnerAuthPage() {
       {/* RIGHT */}
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
-          <Tabs value={mode} onValueChange={(v) => onTabChange(v as Mode)}>
+          <Tabs value={mode}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +60,7 @@ function StepOne({
 
       <Button
         size="lg"
-        className="w-full mt-2"
+        className="mt-2 w-full"
         disabled={!canContinue || isPending}
         onClick={onContinue}
       >
@@ -98,7 +98,7 @@ function StepTwo({
           }
           inputMode="numeric"
           maxLength={6}
-          className="h-14 text-center text-2xl font-mono"
+          className="h-14 text-center font-mono text-2xl"
           placeholder="Enter OTP"
         />
       </div>
@@ -128,11 +128,11 @@ function StepTwo({
 
 export default function AuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
-  const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  // const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
 
-  const [mode, setMode] = useState<Mode>(urlMode);
+  const [mode, setMode] = useState<Mode>("signin");
   const [step, setStep] = useState<1 | 2>(1);
   const [otp, setOtp] = useState("");
 
@@ -141,15 +141,15 @@ export default function AuthPage() {
     password: "",
   });
 
-  const resetFlow = useCallback(() => {
-    setStep(1);
-    setOtp("");
-  }, []);
+  // const resetFlow = useCallback(() => {
+  //   setStep(1);
+  //   setOtp("");
+  // }, []);
 
-  useEffect(() => {
-    setMode(urlMode);
-    resetFlow();
-  }, [urlMode, resetFlow]);
+  // useEffect(() => {
+  //   setMode(urlMode);
+  //   resetFlow();
+  // }, [urlMode, resetFlow]);
 
   /* ------------------ HELPERS ------------------ */
 
@@ -242,24 +242,24 @@ export default function AuthPage() {
     },
   });
 
-  const onTabChange = (next: Mode) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("mode", next);
-    router.replace(`?${params.toString()}`, { scroll: false });
-    resetFlow();
-  };
+  // const onTabChange = (next: Mode) => {
+  //   const params = new URLSearchParams(searchParams.toString());
+  //   params.set("mode", next);
+  //   router.replace(`?${params.toString()}`, { scroll: false });
+  //   resetFlow();
+  // };
 
   /* ------------------ UI ------------------ */
 
   return (
-    <section className="h-[calc(100dvh-4rem)] w-full grid grid-cols-1 lg:grid-cols-2">
+    <section className="grid h-[calc(100dvh-4rem)] w-full grid-cols-1 lg:grid-cols-2">
       {/* LEFT */}
-      <div className="hidden lg:flex flex-col justify-center px-12 xl:px-16 bg-muted">
+      <div className="bg-muted hidden flex-col justify-center px-12 lg:flex xl:px-16">
         <div className="max-w-lg space-y-8">
-          <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
+          <h1 className="text-4xl font-bold tracking-tight xl:text-5xl">
             Invest directly in verified franchises
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             A private platform built for serious investors — no brokers, no
             spam.
           </p>
@@ -269,7 +269,7 @@ export default function AuthPage() {
       {/* RIGHT */}
       <div className="flex items-center justify-center px-6 py-12 sm:px-10">
         <div className="w-full max-w-md space-y-8">
-          <Tabs value={mode} onValueChange={(v) => onTabChange(v as Mode)}>
+          <Tabs value={mode}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>

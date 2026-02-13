@@ -2,8 +2,8 @@
 
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { Player } from "@lottiefiles/react-lottie-player";
-import animationData from "../../../public/thinking.json";
+// import { Player } from "@lottiefiles/react-lottie-player";
+// import animationData from "../../../public/thinking.json";
 import {
   Card,
   CardContent,
@@ -98,7 +98,7 @@ export default function FranchiseDashboardPage() {
       <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
         {/* Lottie Animation */}
         <div className="-mt-20 w-full max-w-sm sm:max-w-md">
-          <Player autoplay loop src={animationData} className="h-full w-full" />
+          {/* <Player autoplay loop src={animationData} className="h-full w-full" /> */}
         </div>
 
         {/* Content */}
