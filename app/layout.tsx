@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, Google_Sans, Ubuntu } from "next/font/google";
+import { Ubuntu } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/lib/tanstack-provider";
 import { Toaster } from "@/components/ui/sonner";
-const inter = Inter({
-  variable: "--font-inter",
-  weight: ["100", "200", "300", "400", "500", "600"],
-});
 
 const ubuntu = Ubuntu({
   weight: ["300", "400", "500", "700"],

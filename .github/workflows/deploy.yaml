@@ -1,0 +1,83 @@
+name: Deploy Grahak 24 Frontend
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Deploy via SSH
+              uses: appleboy/ssh-action@v0.1.3
+              with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USER }}
+                  key: ${{ secrets.SERVER_SSH_KEY }}
+                  script_stop: true
+                  script: |
+                      set -Eeuo pipefail
+
+                      echo ""
+                      echo "=============================="
+                      echo " 🚀 Starting Frontend Deployment"
+                      echo "=============================="
+                      echo ""
+
+                      cd /var/www/app/getfranchise
+
+                      echo "⏳ Pulling latest changes..."
+                      git pull
+                      echo "✅ Code updated."
+
+                      echo ""
+                      echo "🔧 Updating .env.production..."
+                      cat > .env.production << EOF
+                      NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_URL }}
+                      EOF
+                      echo "✅ Environment file updated."
+
+                      echo ""
+                      echo "🐳 Rebuilding Docker image (no cache)..."
+                      docker build --no-cache -t getfranchise .
+                      echo "✅ Docker image rebuilt."
+
+                      echo ""
+                      echo "🧹 Cleaning up old containers..."
+                      docker stop getfranchise || true
+                      docker rm getfranchise || true
+
+                      echo ""
+                      echo "🚀 Starting new container..."
+                      docker run -d \
+                        --name getfranchise \
+                        -p 6001:3000 \
+                        -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+                        getfranchise
+
+                      echo "✅ Container started."
+
+                      echo ""
+                      echo "🧼 Removing dangling images..."
+                      docker image prune -f || true
+
+                      echo ""
+                      echo "📊 Checking container status..."
+                      docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+                      echo ""
+                      echo "📥 Showing last 20 logs of 'getfranchise'..."
+                      docker logs --tail 20 getfranchise || true
+
+                      echo ""
+                      echo "💽 Disk usage after deployment:"
+                      df -h | grep -E '^Filesystem|/var|/dev/'
+
+                      echo ""
+                      echo "=============================="
+                      echo " 🎉 Deployment Completed!"
+                      echo "=============================="
