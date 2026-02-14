@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Upload, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -24,7 +23,7 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from "@/components/ui/combobox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import axiosClient from "@/lib/axios";
 
 const INDIAN_STATES_AND_UTS = [
   "Andhra Pradesh",
@@ -89,10 +88,9 @@ interface TouchedFields {
   [key: string]: boolean;
 }
 const checkListings = async () => {
-  const res = await axios.get(
-    `http://localhost:5151/api/franchise/has-listing`,
-    { withCredentials: true },
-  );
+  const res = await axiosClient.get(`/api/franchise/has-listing`, {
+    withCredentials: true,
+  });
   return res.data;
 };
 export default function CreateFranchiseForm() {
@@ -265,7 +263,7 @@ export default function CreateFranchiseForm() {
 
       images.forEach((img) => fd.append("images", img));
 
-      await axios.post("http://localhost:5151/api/franchise/create", fd, {
+      await axiosClient.post("/api/franchise/create", fd, {
         withCredentials: true,
       });
     },

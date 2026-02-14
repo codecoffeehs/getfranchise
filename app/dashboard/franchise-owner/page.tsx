@@ -1,17 +1,12 @@
 "use client";
 
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-// import { Player } from "@lottiefiles/react-lottie-player";
-// import animationData from "../../../public/thinking.json";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+const Player = dynamic(
+  () => import("@lottiefiles/react-lottie-player").then((mod) => mod.Player),
+  { ssr: false },
+);
+import animationData from "../../../public/thinking.json";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -29,7 +24,8 @@ import {
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import axiosClient from "@/lib/axios";
+import dynamic from "next/dynamic";
 /* ================================
    Types
 ================================ */
@@ -58,10 +54,9 @@ interface FranchiseDashboard {
 ================================ */
 
 const fetchDashboard = async (): Promise<FranchiseDashboard> => {
-  const { data } = await axios.get(
-    "http://localhost:5151/api/franchise/dashboard",
-    { withCredentials: true },
-  );
+  const { data } = await axiosClient.get(`/api/franchise/dashboard`, {
+    withCredentials: true,
+  });
   return data;
 };
 
@@ -98,7 +93,7 @@ export default function FranchiseDashboardPage() {
       <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
         {/* Lottie Animation */}
         <div className="-mt-20 w-full max-w-sm sm:max-w-md">
-          {/* <Player autoplay loop src={animationData} className="h-full w-full" /> */}
+          <Player autoplay loop src={animationData} className="h-full w-full" />
         </div>
 
         {/* Content */}

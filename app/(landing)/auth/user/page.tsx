@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { useMutation } from "@tanstack/react-query";
-import axios, { isAxiosError } from "axios";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
+
 import axiosClient from "@/lib/axios";
 
 type Mode = "signin" | "signup";
@@ -44,7 +47,7 @@ function StepOne({
         <Input
           type="email"
           value={form.email}
-          placeholder="you@example.com"
+          placeholder="investor@email.com"
           onChange={(e) => update("email", e.target.value)}
         />
       </div>
@@ -117,6 +120,7 @@ function StepTwo({
         <Button variant="ghost" onClick={onBack}>
           Back
         </Button>
+
         <Button variant="ghost" disabled={isResending} onClick={onResend}>
           {isResending ? "Resending..." : "Resend OTP"}
         </Button>
@@ -129,9 +133,6 @@ function StepTwo({
 
 export default function AuthPage() {
   const router = useRouter();
-  // const searchParams = useSearchParams();
-
-  // const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
 
   const [mode, setMode] = useState<Mode>("signin");
   const [step, setStep] = useState<1 | 2>(1);
@@ -141,16 +142,6 @@ export default function AuthPage() {
     email: "",
     password: "",
   });
-
-  // const resetFlow = useCallback(() => {
-  //   setStep(1);
-  //   setOtp("");
-  // }, []);
-
-  // useEffect(() => {
-  //   setMode(urlMode);
-  //   resetFlow();
-  // }, [urlMode, resetFlow]);
 
   /* ------------------ HELPERS ------------------ */
 
@@ -165,14 +156,10 @@ export default function AuthPage() {
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const isValidPassword = (password: string) => password.length >= 6;
-
-  const canContinue =
-    isValidEmail(form.email) && isValidPassword(form.password);
+  const canContinue = isValidEmail(form.email) && form.password.length >= 6;
 
   /* ------------------ MUTATIONS ------------------ */
 
-  // LOGIN (NO OTP)
   const loginMutation = useMutation({
     mutationFn: () =>
       axiosClient.post("/api/auth/login", form, {
@@ -182,97 +169,102 @@ export default function AuthPage() {
       toast.success("Signed in successfully");
       router.replace("/dashboard/user");
     },
-    onError: (err) => {
+    onError: (err) =>
       toast.error(
         isAxiosError(err)
           ? err.response?.data?.message || "Login failed"
           : "Login failed",
-      );
-    },
+      ),
   });
 
-  // SIGNUP → SEND OTP
   const signupMutation = useMutation({
     mutationFn: () => axiosClient.post("/api/auth/register/user", form),
     onSuccess: () => {
       setStep(2);
-      toast.success("OTP sent", { description: "Check your email" });
+      toast.success("OTP sent", {
+        description: "Check your email for verification code",
+      });
     },
-    onError: (err) => {
+    onError: (err) =>
       toast.error(
         isAxiosError(err)
           ? err.response?.data?.message || "Signup failed"
           : "Signup failed",
-      );
-    },
+      ),
   });
 
-  // VERIFY OTP (SIGNUP ONLY)
   const verifyOtpMutation = useMutation({
     mutationFn: () =>
       axiosClient.post(
-        "/auth/verify/user",
+        "/api/auth/verify/user",
         { email: form.email, otp },
         { withCredentials: true },
       ),
     onSuccess: () => {
-      toast.success("Account created");
+      toast.success("Account created successfully");
       router.replace("/dashboard/user");
     },
-    onError: (err) => {
+    onError: (err) =>
       toast.error(
         isAxiosError(err)
           ? err.response?.data?.message || "Invalid OTP"
           : "Invalid OTP",
-      );
-    },
+      ),
   });
 
-  // RESEND OTP
   const resendOtpMutation = useMutation({
     mutationFn: () =>
       axiosClient.post("/api/auth/register/resend-otp", {
         email: form.email,
       }),
-    onSuccess: () => {
-      toast.success("OTP resent");
-    },
-    onError: () => {
-      toast.error("Failed to resend OTP");
-    },
+    onSuccess: () => toast.success("OTP resent"),
+    onError: () => toast.error("Failed to resend OTP"),
   });
-
-  // const onTabChange = (next: Mode) => {
-  //   const params = new URLSearchParams(searchParams.toString());
-  //   params.set("mode", next);
-  //   router.replace(`?${params.toString()}`, { scroll: false });
-  //   resetFlow();
-  // };
 
   /* ------------------ UI ------------------ */
 
   return (
     <section className="grid h-[calc(100dvh-4rem)] w-full grid-cols-1 lg:grid-cols-2">
-      {/* LEFT */}
+      {/* LEFT PANEL */}
       <div className="bg-muted hidden flex-col justify-center px-12 lg:flex xl:px-16">
-        <div className="max-w-lg space-y-8">
+        <div className="max-w-md space-y-6">
           <h1 className="text-4xl font-bold tracking-tight xl:text-5xl">
-            Invest directly in verified franchises
+            Discover and invest in high-quality franchise opportunities
           </h1>
+
           <p className="text-muted-foreground text-lg">
-            A private platform built for serious investors — no brokers, no
-            spam.
+            Browse verified franchise brands actively looking for partners,
+            expansion operators, and investors.
+          </p>
+
+          <div className="text-muted-foreground space-y-3 text-sm">
+            <p>• Access verified and vetted franchise listings</p>
+            <p>• Connect directly with franchise owners</p>
+            <p>• Explore opportunities across industries and cities</p>
+            <p>• No brokers. No spam. Direct access.</p>
+          </div>
+
+          <p className="text-muted-foreground text-sm">
+            Create your account to explore opportunities and connect with
+            franchise brands.
           </p>
         </div>
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT PANEL */}
       <div className="flex items-center justify-center px-6 py-12 sm:px-10">
         <div className="w-full max-w-md space-y-8">
-          <Tabs value={mode}>
+          <Tabs
+            value={mode}
+            onValueChange={(v) => {
+              setMode(v as Mode);
+              setStep(1);
+              setOtp("");
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="signup">Create Account</TabsTrigger>
             </TabsList>
 
             {(["signin", "signup"] as Mode[]).map((m) => (
@@ -282,13 +274,14 @@ export default function AuthPage() {
                     <CardTitle>
                       {step === 1
                         ? m === "signin"
-                          ? "Sign in"
-                          : "Create account"
-                        : "Verify email"}
+                          ? "Investor Sign In"
+                          : "Create your investor account"
+                        : "Verify your email"}
                     </CardTitle>
+
                     <CardDescription>
                       {step === 1
-                        ? "Enter your email and password"
+                        ? "Access franchise listings and connect with brands"
                         : `Enter the 6-digit code sent to ${form.email}`}
                     </CardDescription>
                   </CardHeader>
@@ -304,7 +297,9 @@ export default function AuthPage() {
                             ? loginMutation.isPending
                             : signupMutation.isPending
                         }
-                        buttonText={m === "signin" ? "Sign In" : "Send OTP"}
+                        buttonText={
+                          m === "signin" ? "Sign In" : "Send verification code"
+                        }
                         onContinue={() =>
                           m === "signin"
                             ? loginMutation.mutate()

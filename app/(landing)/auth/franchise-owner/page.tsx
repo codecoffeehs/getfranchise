@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import axios, { isAxiosError } from "axios";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+import axiosClient from "@/lib/axios";
 
 type Mode = "login" | "register";
 type Step = 1 | 2;
@@ -111,62 +113,10 @@ function OtpStep({
   );
 }
 
-// function BusinessStep({ form, update, onBack, onSubmit, isPending }: any) {
-//   return (
-//     <div className="space-y-4">
-//       <div className="space-y-2">
-//         <Label>Company / Brand Name</Label>
-//         <Input
-//           value={form.company}
-//           onChange={(e) => update("company", e.target.value)}
-//         />
-//       </div>
-
-//       <div className="space-y-2">
-//         <Label>Registered Address</Label>
-//         <Textarea
-//           rows={4}
-//           value={form.address}
-//           onChange={(e) => update("address", e.target.value)}
-//         />
-//       </div>
-
-//       <div className="space-y-2">
-//         <Label>PAN Number</Label>
-//         <Input
-//           value={form.pan}
-//           onChange={(e) => update("pan", e.target.value)}
-//         />
-//       </div>
-
-//       <div className="space-y-2">
-//         <Label>GST Number</Label>
-//         <Input
-//           value={form.gst}
-//           onChange={(e) => update("gst", e.target.value)}
-//         />
-//       </div>
-
-//       <div className="flex gap-3">
-//         <Button variant="outline" onClick={onBack}>
-//           Back
-//         </Button>
-//         <Button className="flex-1" disabled={isPending} onClick={onSubmit}>
-//           {isPending ? "Submitting..." : "Submit for Verification"}
-//         </Button>
-//       </div>
-//     </div>
-//   );
-// }
-
 /* ------------------ PAGE ------------------ */
 
 export default function FranchiseOwnerAuthPage() {
   const router = useRouter();
-  // const searchParams = useSearchParams();
-
-  // const urlMode =
-  //   searchParams.get("mode") === "register" ? "register" : "login";
 
   const [mode, setMode] = useState<Mode>("login");
   const [step, setStep] = useState<Step>(1);
@@ -175,21 +125,7 @@ export default function FranchiseOwnerAuthPage() {
   const [form, setForm] = useState({
     email: "",
     password: "",
-    company: "",
-    address: "",
-    pan: "",
-    gst: "",
   });
-
-  const resetFlow = useCallback(() => {
-    setStep(1);
-    setOtp("");
-  }, []);
-
-  // useEffect(() => {
-  //   setMode(urlMode);
-  //   resetFlow();
-  // }, [urlMode, resetFlow]);
 
   const clean = (v: string) => v.replace(/\s/g, "");
 
@@ -208,8 +144,8 @@ export default function FranchiseOwnerAuthPage() {
 
   const loginMutation = useMutation({
     mutationFn: () =>
-      axios.post(
-        "http://localhost:5151/api/auth/login",
+      axiosClient.post(
+        "/api/auth/login",
         { email: form.email, password: form.password },
         { withCredentials: true },
       ),
@@ -227,13 +163,15 @@ export default function FranchiseOwnerAuthPage() {
 
   const registerMutation = useMutation({
     mutationFn: () =>
-      axios.post("http://localhost:5151/api/auth/register/franchise", {
+      axiosClient.post("/api/auth/register/franchise", {
         email: form.email,
         password: form.password,
       }),
     onSuccess: () => {
       setStep(2);
-      toast.success("OTP sent", { description: "Check your email" });
+      toast.success("OTP sent", {
+        description: "Check your email for verification code",
+      });
     },
     onError: (err) =>
       toast.error(
@@ -245,37 +183,17 @@ export default function FranchiseOwnerAuthPage() {
 
   const verifyOtpMutation = useMutation({
     mutationFn: () =>
-      axios.post(
-        "http://localhost:5151/api/auth/verify/franchise",
+      axiosClient.post(
+        "/api/auth/verify/franchise",
         { email: form.email, otp },
         { withCredentials: true },
       ),
     onSuccess: () => {
-      // setStep(3);
-      router.replace("");
-      toast.success("Email verified");
+      toast.success("Email verified successfully");
+      router.replace("/dashboard/franchise-owner");
     },
     onError: () => toast.error("Invalid OTP"),
   });
-
-  // const submitBusinessMutation = useMutation({
-  //   mutationFn: () =>
-  //     axios.post("http://localhost:5151/api/franchise/onboarding", form, {
-  //       withCredentials: true,
-  //     }),
-  //   onSuccess: () => {
-  //     toast.success("Submitted for verification");
-  //     router.replace("/dashboard/franchise/pending");
-  //   },
-  //   onError: () => toast.error("Submission failed"),
-  // });
-
-  // const onTabChange = (next: Mode) => {
-  //   const params = new URLSearchParams(searchParams.toString());
-  //   params.set("mode", next);
-  //   router.replace(`?${params.toString()}`, { scroll: false });
-  //   resetFlow();
-  // };
 
   /* ------------------ UI ------------------ */
 
@@ -283,18 +201,42 @@ export default function FranchiseOwnerAuthPage() {
     <section className="grid h-[calc(100dvh-4rem)] w-full grid-cols-1 lg:grid-cols-2">
       {/* LEFT PANEL */}
       <div className="bg-muted hidden flex-col justify-center px-12 lg:flex xl:px-16">
-        <h1 className="text-4xl font-bold tracking-tight xl:text-5xl">
-          List your franchise.
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Reach verified investors. No brokers. No noise.
-        </p>
+        <div className="max-w-md space-y-6">
+          <h1 className="text-4xl font-bold tracking-tight xl:text-5xl">
+            List your franchise. Find serious buyers.
+          </h1>
+
+          <p className="text-muted-foreground text-lg">
+            This platform helps franchise owners showcase their brands and
+            connect directly with verified investors and operators actively
+            looking for franchise opportunities.
+          </p>
+
+          <div className="text-muted-foreground space-y-3 text-sm">
+            <p>• List your franchise and reach qualified prospects</p>
+            <p>• Receive direct inquiries from serious investors</p>
+            <p>• Expand your brand into new cities and markets</p>
+            <p>• No middlemen. No unnecessary noise.</p>
+          </div>
+
+          <p className="text-muted-foreground text-sm">
+            Create your account to start listing and growing your franchise
+            network.
+          </p>
+        </div>
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT PANEL */}
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
-          <Tabs value={mode}>
+          <Tabs
+            value={mode}
+            onValueChange={(v) => {
+              setMode(v as Mode);
+              setStep(1);
+              setOtp("");
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
@@ -305,17 +247,16 @@ export default function FranchiseOwnerAuthPage() {
                 <CardHeader>
                   <CardTitle>
                     {mode === "login"
-                      ? "Franchise Login"
+                      ? "Franchise Owner Login"
                       : step === 1
-                        ? "Create account"
-                        : step === 2
-                          ? "Verify email"
-                          : "Business details"}
+                        ? "Create your franchise owner account"
+                        : "Verify your email"}
                   </CardTitle>
+
                   <CardDescription>
                     {step === 2
                       ? `Enter the 6-digit code sent to ${form.email}`
-                      : ""}
+                      : "Access your dashboard and manage your franchise listings"}
                   </CardDescription>
                 </CardHeader>
 
@@ -353,16 +294,6 @@ export default function FranchiseOwnerAuthPage() {
                       onBack={() => setStep(1)}
                     />
                   )}
-
-                  {/* {mode === "register" && step === 3 && (
-                    <BusinessStep
-                      form={form}
-                      update={update}
-                      onBack={() => setStep(2)}
-                      onSubmit={() => submitBusinessMutation.mutate()}
-                      isPending={submitBusinessMutation.isPending}
-                    />
-                  )} */}
                 </CardContent>
               </Card>
             </TabsContent>

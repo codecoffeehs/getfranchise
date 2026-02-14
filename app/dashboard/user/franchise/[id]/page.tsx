@@ -2,7 +2,6 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { useParams } from "next/navigation";
 import {
   Building2,
@@ -18,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import axiosClient from "@/lib/axios";
 
 /* ================================
    Types
@@ -59,7 +59,7 @@ export default function FranchisePage() {
   const { data, isLoading } = useQuery<FranchiseResponseDto>({
     queryKey: ["franchise", id],
     queryFn: async () => {
-      const res = await axios.get(`http://localhost:5151/api/franchise/${id}`, {
+      const res = await axiosClient.get(`/api/franchise/${id}`, {
         withCredentials: true,
       });
       return res.data;

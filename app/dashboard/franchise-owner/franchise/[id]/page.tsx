@@ -3,7 +3,7 @@
 import React from "react";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -43,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import axiosClient from "@/lib/axios";
 
 /* ================================
    Types
@@ -169,7 +170,7 @@ function EditFranchiseDialog({
       // Add new images if any
       images.forEach((img) => fd.append("images", img));
 
-      await axios.patch(`http://localhost:5151/api/franchise/${id}`, fd, {
+      await axiosClient.patch(`/api/franchise/${id}`, fd, {
         withCredentials: true,
       });
     },
@@ -612,7 +613,7 @@ export default function FranchisePage() {
   const { data, isLoading } = useQuery<FranchiseResponseDto>({
     queryKey: ["franchise", id],
     queryFn: async () => {
-      const res = await axios.get(`http://localhost:5151/api/franchise/${id}`, {
+      const res = await axiosClient.get(`/api/franchise/${id}`, {
         withCredentials: true,
       });
       return res.data;
@@ -621,7 +622,7 @@ export default function FranchisePage() {
   });
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await axios.delete(`http://localhost:5151/api/franchise/${id}`, {
+      await axiosClient.delete(`/api/franchise/${id}`, {
         withCredentials: true,
       });
     },

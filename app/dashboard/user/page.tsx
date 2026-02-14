@@ -20,9 +20,10 @@ import {
   X,
   Filter,
 } from "lucide-react";
-import axios from "axios";
+
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import axiosClient from "@/lib/axios";
 
 /* -------------------- Constants -------------------- */
 
@@ -70,8 +71,8 @@ const searchFranchises = async ({
     params.append("maxInvestment", maxInvestment.toString());
   }
 
-  const { data } = await axios.get<SearchResponse>(
-    `http://localhost:5151/api/franchise/search-franchise?${params.toString()}`,
+  const { data } = await axiosClient.get<SearchResponse>(
+    `/api/franchise/search-franchise?${params.toString()}`,
   );
 
   return data;

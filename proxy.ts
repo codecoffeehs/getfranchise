@@ -19,16 +19,14 @@ export default async function proxy(req: NextRequest) {
       return NextResponse.next();
     }
     // ⛔ No token and protected route → redirect to login
-    return NextResponse.redirect(new URL("/auth/user?mode=register", req.url));
+    return NextResponse.redirect(new URL("/auth/user", req.url));
   }
 
   // Verify token for authenticated users
   const result = await verifyToken(token);
   if (!result) {
     // ⛔ Invalid or expired token → force login
-    const response = NextResponse.redirect(
-      new URL("/auth/user?mode=login", req.url),
-    );
+    const response = NextResponse.redirect(new URL("/auth/user", req.url));
     // Clear the invalid token
     response.cookies.delete("_gf_");
     return response;
@@ -98,7 +96,7 @@ export default async function proxy(req: NextRequest) {
   }
 
   // ❌ Fallback
-  return NextResponse.redirect(new URL("/auth/user?mode=login", req.url));
+  return NextResponse.redirect(new URL("/auth/user", req.url));
 }
 
 export const config = {
