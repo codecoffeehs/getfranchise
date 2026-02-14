@@ -1,4 +1,4 @@
-name: Deploy Grahak 24 Frontend
+name: Deploy Get Franchise Frontend
 
 on:
   push:
