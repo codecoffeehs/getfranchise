@@ -19,11 +19,12 @@ import { LogOut, Menu } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import axiosClient from "@/lib/axios";
 
 /* ------------------ api call ------------------ */
 
 const fetchMe = async () => {
-  const { data } = await axios.get("http://localhost:5151/api/auth/me", {
+  const { data } = await axiosClient.get("/api/auth/me", {
     withCredentials: true,
   });
   return data;
@@ -51,11 +52,7 @@ const FranchiseOwnerNavbar = () => {
   const isActive = (href: string) => pathname === href;
 
   const logout = async () => {
-    await axios.post(
-      `http://localhost:5151/api/auth/logout`,
-      {},
-      { withCredentials: true },
-    );
+    await axiosClient.post(`/api/auth/logout`, {}, { withCredentials: true });
   };
   const logoutMutation = useMutation({
     mutationFn: logout,
