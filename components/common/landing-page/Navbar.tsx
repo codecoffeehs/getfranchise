@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
+    <nav className="bg-background/80 sticky top-0 z-50 w-full border-b backdrop-blur">
       <header className="mx-auto flex w-[90%] max-w-7xl items-center justify-between py-3">
         {/* BRAND */}
         <Link href="/" className="text-lg font-semibold tracking-tight">
@@ -11,31 +11,31 @@ const Navbar = () => {
         </Link>
 
         {/* CENTER NAV (INFO ONLY) */}
-        <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#how-it-works" className="hover:text-foreground transition">
+        <div className="text-muted-foreground hidden items-center gap-6 text-sm font-medium md:flex">
+          <a href="/#how-it-works" className="hover:text-foreground transition">
             How it works
           </a>
-          <a href="#why-us" className="hover:text-foreground transition">
+          <a href="/#why-us" className="hover:text-foreground transition">
             Why us
           </a>
-          <a href="#categories" className="hover:text-foreground transition">
+          {/* <a href="#states" className="hover:text-foreground transition">
             Categories
-          </a>
+          </a> */}
         </div>
 
         {/* ACTIONS */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
           {/* Franchise Owner – Secondary */}
           <Link
-            href="/auth/franchise-owner?mode=register"
-            className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground transition"
+            href="/auth/franchise-owner"
+            className="text-muted-foreground hover:text-foreground hidden text-sm font-medium transition sm:inline-flex"
           >
             List Your Franchise
           </Link>
 
           {/* User – Primary */}
           <Button asChild>
-            <Link href="/auth/user?mode=signup">Get Started</Link>
+            <Link href="/auth/user">Get Started</Link>
           </Button>
         </div>
       </header>

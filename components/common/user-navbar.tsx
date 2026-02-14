@@ -33,8 +33,7 @@ const fetchMe = async () => {
 /* ------------------ component ------------------ */
 
 const UserNavbar = () => {
-  const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 
   const { data: userEmail, isLoading } = useQuery({
@@ -52,7 +51,7 @@ const UserNavbar = () => {
     mutationFn: logout,
     onSuccess: () => {
       toast.success("Logged Out Successfully");
-      router.replace("/auth/user?mode=login");
+      router.replace("/auth/user");
     },
     onError: () => {
       toast.error("Cannot Log Out");
@@ -71,7 +70,7 @@ const UserNavbar = () => {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -125,7 +124,7 @@ const UserNavbar = () => {
             </DropdownMenu>
 
             {/* Mobile Menu */}
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            {/* <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild className="lg:hidden">
                 <Button variant="ghost" size="icon">
                   <Menu className="h-5 w-5" />
@@ -162,7 +161,7 @@ const UserNavbar = () => {
                   ))}
                 </nav>
               </SheetContent>
-            </Sheet>
+            </Sheet> */}
           </div>
         </div>
       </div>

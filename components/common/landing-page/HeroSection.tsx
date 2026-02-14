@@ -7,7 +7,9 @@ const Player = dynamic(
 );
 import animationData from "../../../public/contact.json";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 const HeroSection = () => {
+  const router = useRouter();
   return (
     <section
       id="hero"
@@ -44,9 +46,8 @@ const HeroSection = () => {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-4">
-            <Button size="lg">Get Started</Button>
-            <Button size="lg" variant="outline">
-              Explore Franchises
+            <Button onClick={() => router.push(`/auth/user`)} size="lg">
+              Get Started
             </Button>
           </div>
         </div>

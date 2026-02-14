@@ -10,7 +10,7 @@ const Homepage = () => {
       <HeroSection />
       <HowItWorksSection />
       <WhyGetFranchiseSection />
-      <FranchiseCategoriesSection />
+      {/* <FranchiseCategoriesSection /> */}
       <CTASection />
     </>
   );

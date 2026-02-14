@@ -58,7 +58,7 @@ const FranchiseOwnerNavbar = () => {
     mutationFn: logout,
     onSuccess: () => {
       toast.success("Logged Out Successfully");
-      router.replace(`/auth/franchise-owner?mode=login`);
+      router.replace(`/auth/franchise-owner`);
     },
     onError: () => {
       toast.error("Cannot Log Out");
@@ -76,7 +76,7 @@ const FranchiseOwnerNavbar = () => {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -145,7 +145,7 @@ const FranchiseOwnerNavbar = () => {
             </DropdownMenu>
 
             {/* Mobile */}
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            {/* <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild className="lg:hidden">
                 <Button variant="ghost" size="icon">
                   <Menu className="h-5 w-5" />
@@ -164,7 +164,7 @@ const FranchiseOwnerNavbar = () => {
                   </span>
                 </div>
               </SheetContent>
-            </Sheet>
+            </Sheet> */}
           </div>
         </div>
       </div>

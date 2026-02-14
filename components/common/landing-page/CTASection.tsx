@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const CTASection = () => {
   return (
-   <section className="relative border-t bg-primary py-24 text-primary-foreground">
+    <section className="bg-primary text-primary-foreground relative border-t py-24">
       {/* top separator */}
-      <div className="absolute top-0 left-0 h-px w-full bg-primary-foreground/20" />
+      <div className="bg-primary-foreground/20 absolute top-0 left-0 h-px w-full" />
       <div className="mx-auto max-w-6xl px-8 text-center">
         <h2 className="mb-4 text-4xl font-bold">
           Ready to Find Your Franchise?
@@ -15,16 +16,20 @@ const CTASection = () => {
         </p>
 
         <div className="flex justify-center gap-4">
-          <Button size="lg" variant="secondary">
-            Browse Franchises
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-primary-foreground  hover:bg-primary-foreground text-primary"
-          >
-            List Your Brand
-          </Button>
+          <Link href={"/auth/user"}>
+            <Button size="lg" variant="secondary">
+              Browse Franchises
+            </Button>
+          </Link>
+          <Link href={"/auth/franchise-owner"}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-primary-foreground hover:bg-primary-foreground text-primary"
+            >
+              List Your Brand
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
