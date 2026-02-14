@@ -1,83 +1,93 @@
 name: Deploy Grahak 24 Frontend
 
 on:
-    push:
-        branches: [main]
+  push:
+    branches: [main]
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
 
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v4
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -Eeuo pipefail
 
-            - name: Deploy via SSH.
-              uses: appleboy/ssh-action@v0.1.3
-              with:
-                  host: ${{ secrets.SERVER_IP }}
-                  username: ${{ secrets.SERVER_USER }}
-                  key: ${{ secrets.SERVER_SSH_KEY }}
-                  script_stop: true
-                  script: |
-                      set -Eeuo pipefail
+            echo ""
+            echo "=============================="
+            echo " 🚀 Starting Frontend Deployment"
+            echo "=============================="
+            echo ""
 
-                      echo ""
-                      echo "=============================="
-                      echo " 🚀 Starting Frontend Deployment"
-                      echo "=============================="
-                      echo ""
+            APP_DIR="/var/www/app/getfranchise"
+            CONTAINER_NAME="getfranchise"
+            IMAGE_NAME="getfranchise"
+            PORT="6001"
 
-                      cd /var/www/app/getfranchise
+            echo "📂 Navigating to app directory..."
+            cd $APP_DIR
 
-                      echo "⏳ Pulling latest changes..."
-                      git pull
-                      echo "✅ Code updated."
+            echo ""
+            echo "⏳ Pulling latest changes from Git..."
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✅ Code updated."
 
-                      echo ""
-                      echo "🔧 Updating .env.production..."
-                      cat > .env.production << EOF
-                      NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_URL }}
-                      EOF
-                      echo "✅ Environment file updated."
+            echo ""
+            echo "🔧 Creating production environment file..."
+            cat > .env.production << EOF
+            NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_URL }}
+            NODE_ENV=production
+            EOF
+            echo "✅ Environment file updated."
 
-                      echo ""
-                      echo "🐳 Rebuilding Docker image (no cache)..."
-                      docker build --no-cache -t getfranchise .
-                      echo "✅ Docker image rebuilt."
+            echo ""
+            echo "🐳 Building fresh Docker image..."
+            docker build --no-cache -t $IMAGE_NAME .
+            echo "✅ Docker image built successfully."
 
-                      echo ""
-                      echo "🧹 Cleaning up old containers..."
-                      docker stop getfranchise || true
-                      docker rm getfranchise || true
+            echo ""
+            echo "🧹 Removing old container if exists..."
+            docker rm -f $CONTAINER_NAME 2>/dev/null || echo "ℹ️ No existing container found."
 
-                      echo ""
-                      echo "🚀 Starting new container..."
-                      docker run -d \
-                        --name getfranchise \
-                        -p 6001:3000 \
-                        -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-                        getfranchise
+            echo ""
+            echo "🚀 Starting new container..."
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p $PORT:3000 \
+              -e NODE_ENV=production \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              $IMAGE_NAME
 
-                      echo "✅ Container started."
+            echo "✅ New container started successfully."
 
-                      echo ""
-                      echo "🧼 Removing dangling images..."
-                      docker image prune -f || true
+            echo ""
+            echo "🧼 Cleaning unused Docker images..."
+            docker image prune -af || true
 
-                      echo ""
-                      echo "📊 Checking container status..."
-                      docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+            echo ""
+            echo "📊 Container status:"
+            docker ps --filter "name=$CONTAINER_NAME" \
+              --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
 
-                      echo ""
-                      echo "📥 Showing last 20 logs of 'getfranchise'..."
-                      docker logs --tail 20 getfranchise || true
+            echo ""
+            echo "📥 Last 20 logs:"
+            docker logs --tail 20 $CONTAINER_NAME || true
 
-                      echo ""
-                      echo "💽 Disk usage after deployment:"
-                      df -h | grep -E '^Filesystem|/var|/dev/'
+            echo ""
+            echo "💽 Disk usage:"
+            df -h | grep -E '^Filesystem|/var|/dev/'
 
-                      echo ""
-                      echo "=============================="
-                      echo " 🎉 Deployment Completed!"
-                      echo "=============================="
+            echo ""
+            echo "=============================="
+            echo " 🎉 Frontend Deployment Completed Successfully!"
+            echo "=============================="

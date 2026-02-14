@@ -16,6 +16,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import axios, { isAxiosError } from "axios";
 import { toast } from "sonner";
+import axiosClient from "@/lib/axios";
 
 type Mode = "signin" | "signup";
 
@@ -174,7 +175,7 @@ export default function AuthPage() {
   // LOGIN (NO OTP)
   const loginMutation = useMutation({
     mutationFn: () =>
-      axios.post("http://localhost:5151/api/auth/login", form, {
+      axiosClient.post("/api/auth/login", form, {
         withCredentials: true,
       }),
     onSuccess: () => {
@@ -192,8 +193,7 @@ export default function AuthPage() {
 
   // SIGNUP → SEND OTP
   const signupMutation = useMutation({
-    mutationFn: () =>
-      axios.post("http://localhost:5151/api/auth/register/user", form),
+    mutationFn: () => axiosClient.post("/api/auth/register/user", form),
     onSuccess: () => {
       setStep(2);
       toast.success("OTP sent", { description: "Check your email" });
@@ -210,8 +210,8 @@ export default function AuthPage() {
   // VERIFY OTP (SIGNUP ONLY)
   const verifyOtpMutation = useMutation({
     mutationFn: () =>
-      axios.post(
-        "http://localhost:5151/api/auth/verify/user",
+      axiosClient.post(
+        "/auth/verify/user",
         { email: form.email, otp },
         { withCredentials: true },
       ),
@@ -231,7 +231,7 @@ export default function AuthPage() {
   // RESEND OTP
   const resendOtpMutation = useMutation({
     mutationFn: () =>
-      axios.post("http://localhost:5151/api/auth/register/resend-otp", {
+      axiosClient.post("/api/auth/register/resend-otp", {
         email: form.email,
       }),
     onSuccess: () => {
