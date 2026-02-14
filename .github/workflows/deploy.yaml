@@ -44,6 +44,7 @@ jobs:
             echo ""
             echo "🔧 Creating production environment file..."
             cat > .env.production << EOF
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
             NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_URL }}
             NODE_ENV=production
             EOF
@@ -74,7 +75,6 @@ jobs:
               --name $CONTAINER_NAME \
               --restart unless-stopped \
               -p $PORT:3000 \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               $IMAGE_NAME
 
             echo "✅ New container started successfully."
