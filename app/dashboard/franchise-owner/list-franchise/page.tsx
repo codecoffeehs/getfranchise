@@ -23,7 +23,9 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from "@/components/ui/combobox";
+
 import axiosClient from "@/lib/axios";
+import { useRouter } from "next/navigation";
 
 const INDIAN_STATES_AND_UTS = [
   "Andhra Pradesh",
@@ -64,6 +66,10 @@ const INDIAN_STATES_AND_UTS = [
   "Puducherry",
 ] as const;
 
+/**
+ * FIXED:
+ * Inputs must use string, not number
+ */
 interface FormState {
   franchiseName: string;
   yearEstablished: string;
@@ -72,12 +78,12 @@ interface FormState {
   maxInvestment: string;
   gstNumber: string;
   spaceRequiredSqFt: string;
+  franchiseStates: string[];
   contactPerson: string;
   phoneNumber: string;
   email: string;
   website: string;
   detailedDescription: string;
-  franchiseStates: string[];
 }
 
 interface ValidationErrors {
@@ -87,18 +93,22 @@ interface ValidationErrors {
 interface TouchedFields {
   [key: string]: boolean;
 }
+
 const checkListings = async () => {
-  const res = await axiosClient.get(`/api/franchise/has-listing`, {
+  const res = await axiosClient.get("/api/franchise/has-listing", {
     withCredentials: true,
   });
   return res.data;
 };
+
 export default function CreateFranchiseForm() {
   const anchor = useComboboxAnchor();
+  const router = useRouter();
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const [images, setImages] = React.useState<File[]>([]);
   const [touched, setTouched] = React.useState<TouchedFields>({});
+
   const [form, setForm] = React.useState<FormState>({
     franchiseName: "",
     yearEstablished: "",
@@ -107,136 +117,93 @@ export default function CreateFranchiseForm() {
     maxInvestment: "",
     gstNumber: "",
     spaceRequiredSqFt: "",
+    franchiseStates: [],
     contactPerson: "",
     phoneNumber: "",
     email: "",
     website: "",
     detailedDescription: "",
-    franchiseStates: [],
   });
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
-    setForm((p) => ({ ...p, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const markTouched = (field: string) => {
-    setTouched((p) => ({ ...p, [field]: true }));
-  };
+  const markTouched = (field: string) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
 
-  // Validation logic
+  /* ================= VALIDATION ================= */
+
   const validateForm = (): ValidationErrors => {
     const errors: ValidationErrors = {};
 
-    // Franchise Name
-    if (!form.franchiseName.trim()) {
+    if (!form.franchiseName.trim())
       errors.franchiseName = "Franchise name is required";
-    } else if (form.franchiseName.trim().length < 3) {
+    else if (form.franchiseName.trim().length < 3)
       errors.franchiseName = "Franchise name must be at least 3 characters";
-    }
 
-    // Year Established
     const currentYear = new Date().getFullYear();
     const year = parseInt(form.yearEstablished);
-    if (!form.yearEstablished) {
+
+    if (!form.yearEstablished)
       errors.yearEstablished = "Year established is required";
-    } else if (isNaN(year) || year < 1900 || year > currentYear) {
+    else if (isNaN(year) || year < 1900 || year > currentYear)
       errors.yearEstablished = `Year must be between 1900 and ${currentYear}`;
-    }
 
-    // Total Locations
     const locations = parseInt(form.totalLocations);
-    if (!form.totalLocations) {
+    if (!form.totalLocations)
       errors.totalLocations = "Total locations is required";
-    } else if (isNaN(locations) || locations < 1) {
+    else if (isNaN(locations) || locations < 1)
       errors.totalLocations = "Must have at least 1 location";
-    }
 
-    // GST Number - Indian GST format: 15 characters
-    if (!form.gstNumber.trim()) {
-      errors.gstNumber = "GST number is required";
-    } else if (
-      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+    if (!form.gstNumber.trim()) errors.gstNumber = "GST number is required";
+    else if (
+      !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(
         form.gstNumber.trim(),
       )
-    ) {
-      errors.gstNumber = "Invalid GST number format (e.g., 22AAAAA0000A1Z5)";
-    }
+    )
+      errors.gstNumber = "Invalid GST number format";
 
-    // Min Investment
     const minInv = parseFloat(form.minInvestment);
-    if (!form.minInvestment) {
+    if (!form.minInvestment)
       errors.minInvestment = "Minimum investment is required";
-    } else if (isNaN(minInv) || minInv <= 0) {
-      errors.minInvestment = "Must be greater than 0";
-    }
+    else if (minInv <= 0) errors.minInvestment = "Must be greater than 0";
 
-    // Max Investment
     const maxInv = parseFloat(form.maxInvestment);
-    if (!form.maxInvestment) {
+    if (!form.maxInvestment)
       errors.maxInvestment = "Maximum investment is required";
-    } else if (isNaN(maxInv) || maxInv <= 0) {
-      errors.maxInvestment = "Must be greater than 0";
-    } else if (maxInv < minInv) {
+    else if (maxInv <= 0) errors.maxInvestment = "Must be greater than 0";
+    else if (maxInv < minInv)
       errors.maxInvestment = "Must be greater than minimum investment";
-    }
 
-    // Space Required
     const space = parseFloat(form.spaceRequiredSqFt);
-    if (!form.spaceRequiredSqFt) {
+    if (!form.spaceRequiredSqFt)
       errors.spaceRequiredSqFt = "Space required is required";
-    } else if (isNaN(space) || space <= 0) {
-      errors.spaceRequiredSqFt = "Must be greater than 0";
-    }
+    else if (space <= 0) errors.spaceRequiredSqFt = "Must be greater than 0";
 
-    // Contact Person
-    if (!form.contactPerson.trim()) {
+    if (!form.contactPerson.trim())
       errors.contactPerson = "Contact person name is required";
-    } else if (form.contactPerson.trim().length < 2) {
-      errors.contactPerson = "Name must be at least 2 characters";
-    }
 
-    // Phone Number - Indian format
-    if (!form.phoneNumber.trim()) {
+    if (!form.phoneNumber.trim())
       errors.phoneNumber = "Phone number is required";
-    } else if (
-      !/^[6-9]\d{9}$/.test(form.phoneNumber.trim().replace(/\s/g, ""))
-    ) {
-      errors.phoneNumber =
-        "Invalid Indian phone number (10 digits starting with 6-9)";
-    }
+    else if (!/^[6-9]\d{9}$/.test(form.phoneNumber))
+      errors.phoneNumber = "Invalid Indian phone number";
 
-    // Email
-    if (!form.email.trim()) {
-      errors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    if (!form.email.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errors.email = "Invalid email format";
-    }
 
-    // Website (optional but validate if provided)
-    if (
-      form.website.trim() &&
-      !/^https?:\/\/.+\..+/.test(form.website.trim())
-    ) {
-      errors.website =
-        "Invalid website URL (must start with http:// or https://)";
-    }
+    if (form.website && !/^https?:\/\/.+/.test(form.website))
+      errors.website = "Invalid website URL";
 
-    // Description
-    if (!form.detailedDescription.trim()) {
+    if (!form.detailedDescription.trim())
       errors.detailedDescription = "Description is required";
-    } else if (form.detailedDescription.trim().length < 50) {
-      errors.detailedDescription = `Description must be at least 50 characters (${form.detailedDescription.trim().length}/50)`;
-    }
+    else if (form.detailedDescription.trim().length < 50)
+      errors.detailedDescription = "Minimum 50 characters required";
 
-    // States
-    if (form.franchiseStates.length === 0) {
-      errors.franchiseStates =
-        "Select at least one state where franchise is available";
-    }
+    if (form.franchiseStates.length === 0)
+      errors.franchiseStates = "Select at least one state";
 
-    // Images
-    if (images.length === 0) {
-      errors.images = "At least one image is required";
-    }
+    if (images.length === 0) errors.images = "At least one image is required";
 
     return errors;
   };
@@ -244,19 +211,45 @@ export default function CreateFranchiseForm() {
   const errors = validateForm();
   const isFormValid = Object.keys(errors).length === 0;
 
-  const { data: hasListings, isLoading } = useQuery<Boolean>({
+  /* ================= QUERY ================= */
+
+  const { data: hasListings, isLoading } = useQuery({
     queryKey: ["has-listing"],
     queryFn: checkListings,
   });
 
+  /* ================= MUTATION ================= */
+
   const mutation = useMutation({
     mutationFn: async () => {
       const fd = new FormData();
+      fd.append("FranchiseName", form.franchiseName);
+      fd.append("YearEstablished", form.yearEstablished);
+      fd.append("TotalLocations", form.totalLocations);
+      fd.append("MinInvestment", form.minInvestment);
+      fd.append("MaxInvestment", form.maxInvestment);
+      fd.append("GstNumber", form.gstNumber);
 
+      // IMPORTANT: backend expects SpaceRequiredInFt
+      fd.append("SpaceRequiredInFt", form.spaceRequiredSqFt);
+
+      fd.append("ContactPerson", form.contactPerson);
+      fd.append("PhoneNumber", form.phoneNumber);
+      fd.append("Email", form.email);
+
+      if (form.website) fd.append("Website", form.website);
+
+      fd.append("DetailedDescription", form.detailedDescription);
+
+      form.franchiseStates.forEach((state) =>
+        fd.append("FranchiseStates", state),
+      );
+
+      images.forEach((image) => fd.append("Images", image));
       Object.entries(form).forEach(([key, value]) => {
         if (Array.isArray(value)) {
           value.forEach((v) => fd.append(key, v));
-        } else if (value.trim() !== "") {
+        } else if (value !== "") {
           fd.append(key, value);
         }
       });
@@ -265,11 +258,15 @@ export default function CreateFranchiseForm() {
 
       await axiosClient.post("/api/franchise/create", fd, {
         withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
     },
+
     onSuccess: () => {
       toast.success("Franchise created successfully!");
-      // Reset form
+      router.replace(`/dashboard/franchise-owner`);
       setForm({
         franchiseName: "",
         yearEstablished: "",
@@ -278,16 +275,18 @@ export default function CreateFranchiseForm() {
         maxInvestment: "",
         gstNumber: "",
         spaceRequiredSqFt: "",
+        franchiseStates: [],
         contactPerson: "",
         phoneNumber: "",
         email: "",
         website: "",
         detailedDescription: "",
-        franchiseStates: [],
       });
+
       setImages([]);
       setTouched({});
     },
+
     onError: (error: any) => {
       toast.error(
         error?.response?.data?.message ||
@@ -296,6 +295,8 @@ export default function CreateFranchiseForm() {
     },
   });
 
+  /* ================= IMAGE HANDLER ================= */
+
   const handleImages = (files: FileList | null) => {
     if (!files) return;
 
@@ -303,38 +304,24 @@ export default function CreateFranchiseForm() {
       (f) => f.type.startsWith("image/") && f.size <= 5 * 1024 * 1024,
     );
 
-    const oversized = Array.from(files).filter((f) => f.size > 5 * 1024 * 1024);
-    const invalid = Array.from(files).filter(
-      (f) => !f.type.startsWith("image/"),
-    );
-
-    if (oversized.length > 0) {
-      toast.error(`${oversized.length} file(s) exceeded 5MB size limit`);
-    }
-    if (invalid.length > 0) {
-      toast.error(`${invalid.length} file(s) are not valid images`);
-    }
-
     if (valid.length + images.length > 3) {
       toast.error("Maximum 3 images allowed");
       return;
     }
 
-    if (valid.length > 0) {
-      setImages((p) => [...p, ...valid]);
-      toast.success(`${valid.length} image(s) added successfully`);
-      markTouched("images");
-    }
+    setImages((prev) => [...prev, ...valid]);
+    markTouched("images");
+    toast.success(`${valid.length} image(s) added`);
   };
 
+  /* ================= SUBMIT ================= */
+
   const handleSubmit = () => {
-    // Mark all fields as touched
-    const allFields = Object.keys(form).reduce((acc, key) => {
-      acc[key] = true;
-      return acc;
-    }, {} as TouchedFields);
-    allFields.images = true;
-    setTouched(allFields);
+    const allTouched: TouchedFields = {};
+    Object.keys(form).forEach((key) => (allTouched[key] = true));
+    allTouched.images = true;
+
+    setTouched(allTouched);
 
     if (!isFormValid) {
       toast.error("Please fix all errors before submitting");
@@ -344,18 +331,14 @@ export default function CreateFranchiseForm() {
     mutation.mutate();
   };
 
-  const getFieldStatus = (fieldName: string) => {
-    if (!touched[fieldName]) return null;
-    return errors[fieldName] ? "error" : "success";
-  };
+  /* ================= LOADING ================= */
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
-  }
 
   return hasListings ? (
     <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4">
