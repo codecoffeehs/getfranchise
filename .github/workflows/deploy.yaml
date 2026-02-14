@@ -59,12 +59,21 @@ jobs:
             docker rm -f $CONTAINER_NAME 2>/dev/null || echo "ℹ️ No existing container found."
 
             echo ""
+            echo "🔐 Checking secret configuration..."
+            echo "Secret configured: JWT_SECRET"
+            if [ -n "${{ secrets.JWT_SECRET }}" ]; then
+              echo "✅ JWT_SECRET is present and will be used."
+            else
+              echo "❌ JWT_SECRET is missing!"
+              exit 1
+            fi
+
+            echo ""
             echo "🚀 Starting new container..."
             docker run -d \
               --name $CONTAINER_NAME \
               --restart unless-stopped \
               -p $PORT:3000 \
-              -e NODE_ENV=production \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               $IMAGE_NAME
 
