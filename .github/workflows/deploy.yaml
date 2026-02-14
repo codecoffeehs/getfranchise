@@ -22,7 +22,7 @@ jobs:
             set -Eeuo pipefail
 
             echo ""
-            echo "=============================="
+            echo "==============================="
             echo " 🚀 Starting Frontend Deployment"
             echo "=============================="
             echo ""
