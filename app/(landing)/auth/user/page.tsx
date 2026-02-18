@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import axiosClient from "@/lib/axios";
+import Link from "next/link";
 
 type Mode = "signin" | "signup";
 
@@ -82,6 +84,7 @@ function StepTwo({
   onResend,
   isVerifying,
   isResending,
+  cooldownSeconds,
 }: {
   otp: string;
   setOtp: (v: string) => void;
@@ -90,6 +93,7 @@ function StepTwo({
   onResend: () => void;
   isVerifying: boolean;
   isResending: boolean;
+  cooldownSeconds: number;
 }) {
   return (
     <div className="space-y-4">
@@ -102,27 +106,36 @@ function StepTwo({
           }
           inputMode="numeric"
           maxLength={6}
-          className="h-14 text-center font-mono text-2xl"
-          placeholder="Enter OTP"
+          className="h-12 text-center font-mono text-2xl tracking-widest"
+          placeholder="000000"
         />
       </div>
 
       <Button
         size="lg"
-        className="w-full"
+        className="w-full font-medium"
         disabled={otp.length !== 6 || isVerifying}
         onClick={onVerify}
       >
         {isVerifying ? "Verifying..." : "Verify"}
       </Button>
 
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onBack}>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onBack} className="flex-1">
           Back
         </Button>
 
-        <Button variant="ghost" disabled={isResending} onClick={onResend}>
-          {isResending ? "Resending..." : "Resend OTP"}
+        <Button
+          variant="outline"
+          onClick={onResend}
+          disabled={isResending || cooldownSeconds > 0}
+          className="flex-1"
+        >
+          {cooldownSeconds > 0
+            ? `Resend in ${cooldownSeconds}s`
+            : isResending
+              ? "Sending..."
+              : "Resend OTP"}
         </Button>
       </div>
     </div>
@@ -137,11 +150,22 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [step, setStep] = useState<1 | 2>(1);
   const [otp, setOtp] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setTimeout(
+      () => setCooldownSeconds(cooldownSeconds - 1),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   /* ------------------ HELPERS ------------------ */
 
@@ -214,10 +238,13 @@ export default function AuthPage() {
 
   const resendOtpMutation = useMutation({
     mutationFn: () =>
-      axiosClient.post("/api/auth/register/resend-otp", {
+      axiosClient.post("/api/auth/resend", {
         email: form.email,
       }),
-    onSuccess: () => toast.success("OTP resent"),
+    onSuccess: () => {
+      toast.success("OTP resent to your email");
+      setCooldownSeconds(15);
+    },
     onError: () => toast.error("Failed to resend OTP"),
   });
 
@@ -312,12 +339,25 @@ export default function AuthPage() {
                         setOtp={setOtp}
                         isVerifying={verifyOtpMutation.isPending}
                         isResending={resendOtpMutation.isPending}
+                        cooldownSeconds={cooldownSeconds}
                         onBack={() => setStep(1)}
                         onVerify={() => verifyOtpMutation.mutate()}
                         onResend={() => resendOtpMutation.mutate()}
                       />
                     )}
                   </CardContent>
+                  <CardFooter className="flex justify-center">
+                    <CardFooter className="flex justify-center">
+                      {m === "signin" && step === 1 && (
+                        <Link
+                          href="/auth/forgot-password"
+                          className="rounded-md border border-dashed border-gray-200 px-3 py-1 text-xs text-gray-400 transition-colors duration-200 hover:border-gray-300 hover:text-gray-500"
+                        >
+                          Forgot password? reset here
+                        </Link>
+                      )}
+                    </CardFooter>
+                  </CardFooter>
                 </Card>
               </TabsContent>
             ))}

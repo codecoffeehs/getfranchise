@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -14,11 +14,13 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
 import axiosClient from "@/lib/axios";
+import Link from "next/link";
 
 type Mode = "login" | "register";
 type Step = 1 | 2;
@@ -75,6 +77,7 @@ function OtpStep({
   onResend,
   isVerifying,
   isResending,
+  cooldownSeconds,
 }: any) {
   return (
     <div className="space-y-4">
@@ -87,26 +90,35 @@ function OtpStep({
           }
           inputMode="numeric"
           maxLength={6}
-          className="h-14 text-center font-mono text-2xl"
-          placeholder="Enter OTP"
+          className="h-12 text-center font-mono text-2xl tracking-widest"
+          placeholder="000000"
         />
       </div>
 
       <Button
         size="lg"
-        className="w-full"
+        className="w-full font-medium"
         disabled={otp.length !== 6 || isVerifying}
         onClick={onVerify}
       >
         {isVerifying ? "Verifying..." : "Verify"}
       </Button>
 
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onBack}>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onBack} className="flex-1">
           Back
         </Button>
-        <Button variant="ghost" disabled={isResending} onClick={onResend}>
-          {isResending ? "Resending..." : "Resend OTP"}
+        <Button
+          variant="outline"
+          onClick={onResend}
+          disabled={isResending || cooldownSeconds > 0}
+          className="flex-1"
+        >
+          {cooldownSeconds > 0
+            ? `Resend in ${cooldownSeconds}s`
+            : isResending
+              ? "Sending..."
+              : "Resend OTP"}
         </Button>
       </div>
     </div>
@@ -121,11 +133,22 @@ export default function FranchiseOwnerAuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [step, setStep] = useState<Step>(1);
   const [otp, setOtp] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setTimeout(
+      () => setCooldownSeconds(cooldownSeconds - 1),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   const clean = (v: string) => v.replace(/\s/g, "");
 
@@ -193,6 +216,24 @@ export default function FranchiseOwnerAuthPage() {
       router.replace("/dashboard/franchise-owner");
     },
     onError: () => toast.error("Invalid OTP"),
+  });
+
+  const resendOtpMutation = useMutation({
+    mutationFn: () =>
+      axiosClient.post("/api/auth/resend", {
+        email: form.email,
+      }),
+    onSuccess: () => {
+      toast.success("OTP resent to your email");
+      setCooldownSeconds(15);
+    },
+    onError: (err: any) => {
+      console.log(err);
+      const errorMessage = isAxiosError(err)
+        ? err.response?.data.message
+        : "Failed To Resend OTP";
+      toast.error(errorMessage);
+    },
   });
 
   /* ------------------ UI ------------------ */
@@ -288,13 +329,26 @@ export default function FranchiseOwnerAuthPage() {
                       otp={otp}
                       setOtp={setOtp}
                       isVerifying={verifyOtpMutation.isPending}
-                      isResending={registerMutation.isPending}
+                      isResending={resendOtpMutation.isPending}
+                      cooldownSeconds={cooldownSeconds}
                       onVerify={() => verifyOtpMutation.mutate()}
-                      onResend={() => registerMutation.mutate()}
+                      onResend={() => resendOtpMutation.mutate()}
                       onBack={() => setStep(1)}
                     />
                   )}
                 </CardContent>
+                <CardFooter className="flex justify-center">
+                  <CardFooter className="flex justify-center">
+                    {mode === "login" && step === 1 && (
+                      <Link
+                        href="/auth/forgot-password"
+                        className="rounded-md border border-dashed border-gray-200 px-3 py-1 text-xs text-gray-400 transition-colors duration-200 hover:border-gray-300 hover:text-gray-500"
+                      >
+                        Forgot password? reset here
+                      </Link>
+                    )}
+                  </CardFooter>
+                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>

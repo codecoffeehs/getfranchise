@@ -34,7 +34,7 @@ const fetchMe = async () => {
 
 const FranchiseOwnerNavbar = () => {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { data: userEmail, isLoading } = useQuery({
     queryKey: ["me"],
