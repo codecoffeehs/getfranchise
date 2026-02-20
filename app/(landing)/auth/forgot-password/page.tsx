@@ -101,12 +101,14 @@ export default function ForgotPasswordPage() {
       return res.data;
     },
     onSuccess: (data) => {
-      if (data.role === "0") {
-        router.replace("/user");
+      if (data.role === 0) {
+        router.replace("/auth/user");
       } else {
-        router.replace("/franchise-owner");
+        router.replace("/auth/franchise-owner");
       }
-      toast.success("Password reset successfully");
+      toast.success("Password reset successfully", {
+        description: "Login With New Password",
+      });
     },
     onError: () => {
       toast.error("Failed to reset password. Please try again.");
