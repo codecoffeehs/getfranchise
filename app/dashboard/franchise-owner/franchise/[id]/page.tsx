@@ -699,7 +699,9 @@ export default function FranchisePage() {
               text={`Established ${data.yearEstablished}`}
             />
             <Meta icon={Building2} text={`${data.totalLocations} Locations`} />
-            <Meta icon={FileText} text={`GST ${data.gstNumber}`} />
+            {data.gstNumber && (
+              <Meta icon={FileText} text={`GST ${data.gstNumber}`} />
+            )}
           </div>
         </div>
 

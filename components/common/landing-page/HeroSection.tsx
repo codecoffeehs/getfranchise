@@ -8,6 +8,20 @@ const Player = dynamic(
 import animationData from "../../../public/contact.json";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Search, Store } from "lucide-react";
 const HeroSection = () => {
   const router = useRouter();
   return (
@@ -43,12 +57,6 @@ const HeroSection = () => {
               <span className="bg-primary h-2 w-2 rounded-full" />
               Only Trusted Brands
             </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Button onClick={() => router.push(`/auth/user`)} size="lg">
-              Get Started
-            </Button>
           </div>
         </div>
 

@@ -26,6 +26,7 @@ import {
 
 import axiosClient from "@/lib/axios";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const INDIAN_STATES_AND_UTS = [
   "Andhra Pradesh",
@@ -155,8 +156,8 @@ export default function CreateFranchiseForm() {
     else if (isNaN(locations) || locations < 1)
       errors.totalLocations = "Must have at least 1 location";
 
-    if (!form.gstNumber.trim()) errors.gstNumber = "GST number is required";
-    else if (
+    if (
+      form.gstNumber.trim() &&
       !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(
         form.gstNumber.trim(),
       )
@@ -228,7 +229,7 @@ export default function CreateFranchiseForm() {
       fd.append("TotalLocations", form.totalLocations);
       fd.append("MinInvestment", form.minInvestment);
       fd.append("MaxInvestment", form.maxInvestment);
-      fd.append("GstNumber", form.gstNumber);
+      if (form.gstNumber.trim()) fd.append("GstNumber", form.gstNumber.trim());
 
       // IMPORTANT: backend expects SpaceRequiredInFt
       fd.append("SpaceRequiredInFt", form.spaceRequiredSqFt);
@@ -246,15 +247,6 @@ export default function CreateFranchiseForm() {
       );
 
       images.forEach((image) => fd.append("Images", image));
-      Object.entries(form).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          value.forEach((v) => fd.append(key, v));
-        } else if (value !== "") {
-          fd.append(key, value);
-        }
-      });
-
-      images.forEach((img) => fd.append("images", img));
 
       await axiosClient.post("/api/franchise/create", fd, {
         withCredentials: true,
@@ -358,8 +350,10 @@ export default function CreateFranchiseForm() {
           </p>
 
           <div className="mt-4 flex gap-3">
-            <Button variant="default">Go to Dashboard</Button>
-            <Button variant="outline">View Listing</Button>
+            <Button variant="default">
+              <Link href={"/dashboard"}>Go to Dashboard</Link>
+            </Button>
+            {/* <Button onClick={()=>} variant="outline">View Listing</Button> */}
           </div>
         </CardContent>
       </Card>
@@ -489,9 +483,7 @@ export default function CreateFranchiseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="gstNumber">
-                  GST Number <span className="text-red-500">*</span>
-                </Label>
+                <Label htmlFor="gstNumber">GST Number</Label>
                 <div className="relative">
                   <Input
                     id="gstNumber"
@@ -503,16 +495,18 @@ export default function CreateFranchiseForm() {
                     onBlur={() => markTouched("gstNumber")}
                     maxLength={15}
                     className={`transition-all duration-200 ${
-                      touched.gstNumber
+                      touched.gstNumber && form.gstNumber.trim()
                         ? errors.gstNumber
                           ? "border-red-500 focus-visible:ring-red-500"
                           : "border-green-500 focus-visible:ring-green-500"
                         : ""
                     }`}
                   />
-                  {touched.gstNumber && !errors.gstNumber && (
-                    <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
-                  )}
+                  {touched.gstNumber &&
+                    form.gstNumber.trim() &&
+                    !errors.gstNumber && (
+                      <CheckCircle2 className="animate-in zoom-in-50 absolute top-3 right-3 h-4 w-4 text-green-500 duration-200" />
+                    )}
                 </div>
                 {touched.gstNumber && errors.gstNumber && (
                   <p className="animate-in slide-in-from-top-1 flex items-center gap-1 text-xs text-red-500 duration-200">
